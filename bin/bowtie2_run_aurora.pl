@@ -162,8 +162,8 @@ for ( my $i = 0 ; $i < @files ; $i++ ) {
 		$tmp = $files[$i];
 		$tmp =~ s/\s+/_/g;
 		warn "I rename the file $files[$i] to $tmp\n";
-		print "mv $files[$i] $tmp\n";
-		system( "mv $files[$i] $tmp");
+		print "mv '$files[$i]' $tmp\n";
+		system( "mv '$files[$i]' $tmp");
 		$files_modified = 1;
 		$files[$i] = $tmp;
 	}
