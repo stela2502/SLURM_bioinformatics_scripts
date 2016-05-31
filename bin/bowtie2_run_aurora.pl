@@ -140,6 +140,19 @@ foreach (qw(n N t)) {
 	delete( $options->{$_} );
 }
 
+
+##### load the modules that are needed first!
+system( "module add GCC/4.9.2  OpenMPI/1.8.4" );
+system( "module add BEDTools/2.25.0" );
+system( "module add SAMtools/1.3" );
+system( "module add icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048");
+system( "module add ifort/2016.1.150-GCC-4.9.3-2.25  impi/5.1.2.150" );
+system( "module add libpng/1.6.21" );
+system( "module add Bowtie2/2.2.6");
+
+
+
+my $files_modified = 0;
 $cmd = "bowtie2 -x $genome ";
 foreach my $key ( keys %$options ) {
 	$cmd .= " -$key $options->{$key}";
@@ -149,10 +162,14 @@ for ( my $i = 0 ; $i < @files ; $i++ ) {
 		$tmp = $files[$i];
 		$tmp =~ s/\s+/_/g;
 		warn "I rename the file $files[$i] to $tmp\n";
+		print "mv $files[$i] $tmp\n";
 		system( "mv $files[$i] $tmp");
+		$files_modified = 1;
 		$files[$i] = $tmp;
 	}
 }
+
+Carp::confess ( "Files were moved/renamed - please re-run!\n" ) if ( $files_modified );
 
 if ($paired) {
 	for ( my $i = 0 ; $i < @files ; $i += 2 ) {

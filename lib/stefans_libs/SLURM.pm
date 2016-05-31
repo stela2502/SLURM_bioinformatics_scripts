@@ -108,10 +108,10 @@ sub run {
 	print OUT $s;
 	close ( OUT );
 	if ( $self->{'debug'} ) {
-		print "SBATCH $fm->{path}/$fm->{'filename_core'}.sh\n\nwould run:\n$s\n";
+		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n\nwould run:\n$s\n";
 	}
 	else {
-		system( "SBATCH $fm->{path}/$fm->{'filename_core'}.sh" );
+		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" );
 	}
 	return 1;
 }
