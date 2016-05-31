@@ -125,7 +125,7 @@ for ( my $i = 0 ; $i < @options ; $i += 2 ) {
 }
 print "\$exp =  " . root->print_perl_var_def($options) . ";\n";
 ## Do whatever you want!
-my ( $cmd, $fm, $this_cmd, @big_wig_urls );
+my ( $cmd, $fm, $this_cmd, @big_wig_urls, $tmp );
 
 my $SLURM = stefans_libs::SLURM->new($options);
 $SLURM->{'debug'} = 1 if ($debug);
@@ -138,6 +138,15 @@ foreach (qw(n N t)) {
 $cmd = "bowtie2 -x $genome ";
 foreach my $key ( keys %$options ) {
 	$cmd .= " -$key $options->{$key}";
+}
+for ( my $i = 0 ; $i < @files ; $i++ ) {
+	if ( $files[$i] =~ m/\s/ ){
+		$tmp = $files[$i];
+		$tmp =~ s/\s+/_/g;
+		warn "I rename the file $files[$i] to $tmp\n";
+		system( "mv $files[$i] $tmp");
+		$files[$i] = $tmp;
+	}
 }
 
 if ($paired) {
