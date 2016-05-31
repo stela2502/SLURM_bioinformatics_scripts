@@ -166,7 +166,7 @@ if ($paired) {
 		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam\n";
 		$this_cmd .= &convert($fm);
 		$this_cmd .= &bigwig($fm);
-		$SLURM->run( $this_cmd, $fm );
+		$SLURM->run( $this_cmd, $fm ) unless ( -f $fm->{'path'} . "bowtie2/" . $fm->{'filename'} . "_bowtie2.bedGraph");
 	}
 }
 else {
@@ -181,7 +181,7 @@ else {
 		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam\n";
 		$this_cmd .= &convert($fm);
 		$this_cmd .= &bigwig($fm);
-		$SLURM->run( $this_cmd, $fm );
+		$SLURM->run( $this_cmd, $fm ) unless ( -f $fm->{'path'} . "bowtie2/" . $fm->{'filename'} . "_bowtie2.bedGraph");
 	}
 }
 
@@ -190,7 +190,7 @@ if ( @big_wig_urls > 0 ) {
 	  or die "I could not create the bigwig outfile '$bigwigTracks'\n$!\n";
 	print OUT join( "\n", @big_wig_urls );
 	close(OUT);
-	print join( "\n", @big_wig_urls );
+	print join( "\n", @big_wig_urls )."\n\n";
 	open ( LOG , ">$bigwigTracks.log" ) or die "I could not open the log file '$bigwigTracks.log'\n$!\n";
 	print LOG $task_description ."\n";
 	close ( LOG );
