@@ -11,7 +11,7 @@ my $exec = $plugin_path . "/../bin/bowtie2_run_aurora.pl";
 ok( -f $exec, "the script has been found" );
 
 if ( -d "$plugin_path/data/bowtie2/" ) {
-	system( 'rm ' . "$plugin_path/data/bowtie2/" );
+	system( 'rm -Rf ' . "$plugin_path/data/bowtie2/" );
 }
 if ( -f -f "$plugin_path/data/test_empty.fastq.sh" ) {
 	unlink( -f "$plugin_path/data/test_empty.fastq.sh" );
@@ -22,7 +22,7 @@ $value =
   . "-options n 1 N 1 t '00:02:00' p 2 "
   . "-genome $plugin_path/data/hg38/hg38 "    ## does not even exist
   . "-coverage  $plugin_path/data/fake_hg38.chrom.sizes.txt "
-  . "-bigwigTracks ~/nobackup/Jonas_Larsson/Roman_Galeev/BigWigTrackInfo.txt  -debug";
+  . "-bigwigTracks $plugin_path/data/output/BigWigTrackInfo.txt  -debug";
 print "the command:\n$value\n";
 system($value );
 

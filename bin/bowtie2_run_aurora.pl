@@ -89,6 +89,11 @@ unless ( -f $coverage ) {
 else {
 	unless ( defined $bigwigTracks ) {
 		$error .= "the cmd line switch -bigwigTracks  is undefined!\n";
+	}else {
+		my $tmp = root->filemap( $bigwigTracks ) ;
+		unless ( -d $tmp->{'path'} ){
+			mkdir( $tmp->{'path'} );
+		}
 	}
 }
 
@@ -182,10 +187,13 @@ else {
 
 if ( @big_wig_urls > 0 ) {
 	open( OUT, ">$bigwigTracks" )
-	  or die "I could not create the bigwig outfile\n$!\n";
+	  or die "I could not create the bigwig outfile '$bigwigTracks'\n$!\n";
 	print OUT join( "\n", @big_wig_urls );
 	close(OUT);
 	print join( "\n", @big_wig_urls );
+	open ( LOG , ">$bigwigTracks.log" ) or die "I could not open the log file '$bigwigTracks.log'\n$!\n";
+	print LOG $task_description ."\n";
+	close ( LOG );
 }
 
 sub convert {
@@ -215,7 +223,6 @@ sub bigwig {
 	$cmd =
 	  "bedtools genomecov -bg -split -ibam $infile -g $coverage > $outfile\n";
 
-	#system($cmd ) unless ( -f $outfile);
 	$infile = $outfile;
 	$outfile =~ s/.bedGraph$/.bw/;
 	$cmd .= "bedGraphToBigWig $infile $coverage $outfile\n";
