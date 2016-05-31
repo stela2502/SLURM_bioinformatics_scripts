@@ -220,7 +220,7 @@ sub bigwig {
 	  unless ( -f $coverage );
 	my $outfile =
 	  $fm->{'path'} . "bowtie2/" . $fm->{'filename'} . "_bowtie2.bedGraph";
-	$cmd =
+	my $cmd =
 	  "bedtools genomecov -bg -split -ibam $infile -g $coverage > $outfile\n";
 
 	$infile = $outfile;
