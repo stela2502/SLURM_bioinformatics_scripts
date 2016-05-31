@@ -10,5 +10,6 @@ samtools view -Sb  /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/datab
 if  [ -f /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/databowtie2/test_empty.fastq.gz_bowtie2.sorted.bam ]&&[ -s /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/databowtie2/test_empty.fastq.gz_bowtie2.sorted.bam ]; then
 rm -f /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/databowtie2/test_empty.fastq.gz_bowtie2.sam
 fi
-## no -coverage option - no bigwig conversion
+bedtools genomecov -bg -split -ibam /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/databowtie2/test_empty.fastq.gz_bowtie2.sorted.bam -g /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/fake_hg38.chrom.sizes.txt > /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/databowtie2/test_empty.fastq.gz_bowtie2.bedGraph
+bedGraphToBigWig /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/databowtie2/test_empty.fastq.gz_bowtie2.bedGraph /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/fake_hg38.chrom.sizes.txt /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/databowtie2/test_empty.fastq.gz_bowtie2.bw
 

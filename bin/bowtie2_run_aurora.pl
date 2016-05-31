@@ -62,7 +62,7 @@ Getopt::Long::GetOptions(
 	"-files=s{,}"     => \@files,
 	"-options=s{,}"   => \@options,
 	"-genome=s"       => \$genome,
-	"-coverage"       => \$coverage,
+	"-coverage=s"       => \$coverage,
 	"-paired"         => \$paired,
 	"-bigwigTracks=s" => \$bigwigTracks,
 
