@@ -126,7 +126,7 @@ for ( my $i = 0 ; $i < @options ; $i += 2 ) {
 my ( $cmd, $fm, $this_cmd, @big_wig_urls );
 
 
-my $SLURM = SLURM->new( $options );
+my $SLURM = stefans_libs::SLURM->new( $options );
 $SLURM->{$debug} = 1 if ( $debug );
 ## k$SLURMick all SLURM options that should not be used for the bowtie
 foreach ( qw(n N t) ) {
