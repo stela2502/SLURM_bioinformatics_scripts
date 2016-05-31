@@ -86,7 +86,12 @@ sub script {
 	$self->check( @o );
 	my $ret = '#! /bin/bash'."\n";
 	foreach my $option ( @o ) {
-		$ret .= "#SBATCH -$option $self->{$option}\n";
+		if ( length( $option) == 1 ) {
+			$ret .= "#SBATCH -$option $self->{$option}\n";
+		}else {
+			$ret .= "#SBATCH --$option $self->{$option}\n";
+		}
+		
 	}
 	$ret .= join("\n", "#SBATCH -J $name","#SBATCH -o $name"."%j.out","#SBATCH -e $name"."%j.err");
 	$ret .= "\n$cmd\n";

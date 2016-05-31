@@ -136,7 +136,7 @@ my $SLURM = stefans_libs::SLURM->new($options);
 $SLURM->{'debug'} = 1 if ($debug);
 
 ## kick all SLURM options that should not be used for the bowtie
-foreach (qw(n N t)) {
+foreach (qw(n N t mem)) {
 	delete( $options->{$_} );
 }
 
