@@ -51,11 +51,17 @@ sub new{
 
 	my ( $class, $options ) = @_;
 
-	$options->{'debug'} ||= 0;
+	my $self = {
+	};
+	foreach my $key  (keys %$options ) {
+		$self->{$key} = $options->{$key};
+	}
+	$self->{'debug'} ||= 0;
+	
 
-  	bless $options, $class  if ( $class eq "stefans_libs::SLURM" );
+  	bless $self, $class  if ( $class eq "stefans_libs::SLURM" );
 
-  	return $options;
+  	return $self;
 
 }
 

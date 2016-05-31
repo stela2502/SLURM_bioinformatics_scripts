@@ -15,8 +15,7 @@ is_deeply( ref($SLURM), 'stefans_libs::SLURM',
 
 $value = $SLURM->script( "some_command.pl", "my_name" );
 
-print "\$exp =  "
-  . root->print_perl_var_def( [ split( "\n", $value ) ] ) . ";\n";
+#print "\$exp =  " . root->print_perl_var_def( [ split( "\n", $value ) ] ) . ";\n";
 $exp = [
 	'#! /bin/bash',
 	'#SBATCH -n 2',
