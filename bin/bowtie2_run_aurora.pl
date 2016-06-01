@@ -275,7 +275,7 @@ sub bigwig {
 	  unless ( -f $coverage );
 	my $outfile =
 	  $fm->{'path'} . "/bowtie2/" . $fm->{'filename_core'} . "_bowtie2.bedGraph";
-	my $cmd = $SLURM->check_4_outfile( "bedtools genomecov -bg -split -ibam $infile -g $coverage > $outfile\n", $outfile );
+	my $cmd = $SLURM->check_4_outfile( "bedtools genomecov -bg -split -ibam $infile -g $coverage | sort -k1,1 -k2,2n > $outfile\n", $outfile );
 
 	$infile = $outfile;
 	$outfile =~ s/.bedGraph$/.bw/;
