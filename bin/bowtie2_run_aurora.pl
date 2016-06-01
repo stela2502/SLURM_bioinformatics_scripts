@@ -207,6 +207,10 @@ if ($paired) {
 		$this_cmd .= " -1 '$files[$i]' -2 '" . $files[ $i + 1 ] . "'";
 		$this_cmd .=
 		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam\n";
+		if ( -f "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam" ) {
+			$this_cmd = "#$this_cmd";
+			warn "to re-run mapping remove the file '$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam'";
+		}
 		$this_cmd .= &convert($fm);
 		$this_cmd .= &bigwig($fm);
 		$SLURM->run( $this_cmd, $fm ) unless ( -f $fm->{'path'} . "bowtie2/" . $fm->{'filename'} . "_bowtie2.bedGraph");
@@ -222,6 +226,10 @@ else {
 		$this_cmd .= " -U '$files[$i]'";
 		$this_cmd .=
 		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam\n";
+		if ( -f "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam" ) {
+			$this_cmd = "#$this_cmd";
+			warn "to re-run mapping remove the file '$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam'";
+		}
 		$this_cmd .= &convert($fm);
 		$this_cmd .= &bigwig($fm);
 		$SLURM->run( $this_cmd, $fm ) unless ( -f $fm->{'path'} . "bowtie2/" . $fm->{'filename'} . "_bowtie2.bedGraph");
@@ -245,9 +253,11 @@ if ( $debug ) {
 		"I recommend: 'bash $fm->{'path'}/InitializeSLURMenv.sh'\n";
 }
 
+
+
 sub convert {
 	my $fm = shift;
-	my $f  = $fm->{'path'} . "/bowtie2/" . $fm->{'filename'} . "_bowtie2";
+	my $f  = $fm->{'path'} . "/bowtie2/" . $fm->{'filename_core'} . "_bowtie2";
 	my $p  = $options->{'p'};
 	$p ||= 2;
 	return join(
@@ -264,11 +274,11 @@ rm -f $f.sam",
 sub bigwig {
 	my $fm = shift;
 	my $infile =
-	  $fm->{'path'} . "/bowtie2/" . $fm->{'filename'} . "_bowtie2.sorted.bam";
+	  $fm->{'path'} . "/bowtie2/" . $fm->{'filename_core'} . "_bowtie2.sorted.bam";
 	return "## no -coverage option - no bigwig conversion\n"
 	  unless ( -f $coverage );
 	my $outfile =
-	  $fm->{'path'} . "/bowtie2/" . $fm->{'filename'} . "_bowtie2.bedGraph";
+	  $fm->{'path'} . "/bowtie2/" . $fm->{'filename_core'} . "_bowtie2.bedGraph";
 	my $cmd =
 	  "bedtools genomecov -bg -split -ibam $infile -g $coverage > $outfile\n";
 
@@ -277,8 +287,8 @@ sub bigwig {
 	$cmd .= "bedGraphToBigWig $infile $coverage $outfile\n";
 	push(
 		@big_wig_urls,
-"track type=bigWig name=\"$fm->{'filename'}\" description=\"$fm->{'filename'}\""
-		  . " bigDataUrl=http://bone.bmc.lu.se/Public/$fm->{'filename'}_bowtie2.bw"
+"track type=bigWig name=\"$fm->{'filename_core'}\" description=\"$fm->{'filename_core'}\""
+		  . " bigDataUrl=http://bone.bmc.lu.se/Public/$fm->{'filename_core'}_bowtie2.bw"
 	);
 	return $cmd;
 }
