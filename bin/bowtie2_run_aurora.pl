@@ -31,6 +31,14 @@
 
        -help      :print this help
        -debug     :verbose output
+    
+    required options:
+    
+    n   :number of cores to request from SLURM (rec. 10)
+    N   :number of nodes to request from SLURM (rec. 1)
+    mem :minimum memory from SLURM (rec. 4000M for e.g. human genome)
+    t   :the time the job should get to finish - do not set too short
+         rec 02:00:00 == 2h
   
 =head1 DESCRIPTION
 
@@ -81,6 +89,11 @@ unless ( defined $options[0] ) {
 }
 unless ( defined $genome ) {
 	$error .= "the cmd line switch -genome is undefined!\n";
+}else {
+	my $tmp = root->filemap( $genome );
+	unless ( -d $tmp->{'path'} ) {
+		$error .= "the cmd line switch -genome '$tmp->{'path'}'\npath not found!\n";
+	}
 }
 unless ( -f $coverage ) {
 	$warn .=
@@ -142,14 +155,16 @@ foreach (qw(n N t mem)) {
 
 
 ##### load the modules that are needed first!
-system( "module add GCC/4.9.2  OpenMPI/1.8.4" );
-system( "module add BEDTools/2.25.0" );
-system( "module add SAMtools/1.3" );
-system( "module add icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048");
-system( "module add ifort/2016.1.150-GCC-4.9.3-2.25  impi/5.1.2.150" );
-system( "module add libpng/1.6.21" );
-system( "module add Bowtie2/2.2.6");
-
+## therefore I need to create a script file and run that using bash
+$fm = root->filemap( $files[0] );
+open ( SC, ">$fm->{'path'}/InitializeSLURMenv.sh") or die "I could not create the SLURM init script\n$!\n";
+print SC join("\n",  "module add GCC/4.9.2  OpenMPI/1.8.4", "module add BEDTools/2.25.0" , "module add SAMtools/1.3" ,
+"module add icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048", "module add ifort/2016.1.150-GCC-4.9.3-2.25  impi/5.1.2.150",
+ "module add libpng/1.6.21" , "module add Bowtie2/2.2.6");
+close ( SC );
+unless ( $debug ) {
+	system( "bash $fm->{'path'}/InitializeSLURMenv.sh" );
+}
 
 
 my $files_modified = 0;
@@ -211,6 +226,12 @@ if ( @big_wig_urls > 0 ) {
 	open ( LOG , ">$bigwigTracks.log" ) or die "I could not open the log file '$bigwigTracks.log'\n$!\n";
 	print LOG $task_description ."\n";
 	close ( LOG );
+}
+
+if ( $debug ) {
+	$fm = root->filemap( $files[0] );
+	print "before you run the sbatch calls make sure you have loaded all required modules.\n".
+		"I recommend: 'bash $fm->{'path'}/InitializeSLURMenv.sh'\n";
 }
 
 sub convert {

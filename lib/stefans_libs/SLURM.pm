@@ -112,10 +112,8 @@ sub run {
 	open ( OUT ,">$fm->{path}/$fm->{'filename_core'}.sh" ) or Carp::confess ( "I can not create the script file '$fm->{path}/$fm->{'filename_core'}.sh'\n$!\n");
 	print OUT $s;
 	close ( OUT );
-	if ( $self->{'debug'} ) {
-		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n\nwould run:\n$s\n";
-	}
-	else {
+	print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
+	unless ( $self->{'debug'}) {
 		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" );
 	}
 	return 1;
