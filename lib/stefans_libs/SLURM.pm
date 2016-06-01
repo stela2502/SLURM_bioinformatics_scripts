@@ -120,7 +120,7 @@ sub run {
 		if ( @OK > 0 ) {
 			system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" )
 		}else {
-			print "Useless to run scrip - no commands in the file\n";
+			print "Useless to run script - no commands in the file\n";
 		}
 	}
 	return 1;
