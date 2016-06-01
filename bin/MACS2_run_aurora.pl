@@ -72,6 +72,9 @@ my $error = '';
 unless ( -f $files[0]) {
 	$error .= "the cmd line switch -files is undefined!\n";
 }
+unless ( -f $cfiles[0]) {
+	$error .= "the cmd line switch -cfiles is undefined!\n";
+}
 unless ( defined $options[0]) {
 	$error .= "the cmd line switch -options is undefined!\n";
 }
@@ -120,6 +123,12 @@ $options ->{'t'} ||='02:00:00';
 ## Do whatever you want!
 my ( $SLURM, $cmd, $tmp, $outfile, $file, $cfile, $fm, $cfm );
 $SLURM = stefans_libs::SLURM->new( $options );
+
+## kick all SLURM options that should not be used for the MACS2
+foreach (qw(n N t mem)) {
+	delete( $options->{$_} );
+}
+
 $SLURM->{'debug'} = 1 if ( $debug );
 stefans_libs::SLURM::check( $options, qw( f g q ) );
 
@@ -134,7 +143,7 @@ for ( my $i = 0; $i <@files; $i ++ ) {
 	$cmd .= $tmp;
 	$fm->{'path'}.="/MACS2_out";
 	mkdir ( $fm->{'path'} ) unless ( -d $fm->{'path'} );
-	$outfile = "$fm->{'path'}/$fm->{'file_core'}";
+	$outfile = "$fm->{'path'}/$fm->{'filename_core'}";
 	$cmd .= $SLURM->check_4_outfile( "MACS2 -t $fm->{'total'} -c $cfm->{'total'} ", $outfile."_peaks.bed");
 	foreach my $key ( keys %$options ) {
 		$cmd .= " -$key $options->{$key}";
@@ -154,7 +163,7 @@ sub rmdup {
 	my $fm = shift;
 	return ('' , $fm) if ( $normdup );
 	return ('' , $fm) unless ( $fm->{'filename_ext'} eq "bam" );
-	my $outfile = "$fm->{'path'}/$fm->{'file_core'}.rmdup.bam";
+	my $outfile = "$fm->{'path'}/$fm->{'filename_core'}.rmdup.bam";
 	$cmd = $SLURM->check_4_outfile( "samtools rmdup $fm->{'total'} $outfile\n", $outfile);
 	$fm = root->filemap( $outfile );
 	return ( $cmd, $fm );
