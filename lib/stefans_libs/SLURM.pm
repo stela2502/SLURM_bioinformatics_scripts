@@ -118,6 +118,11 @@ sub run {
 	}
 	return 1;
 }
+=head3 check_4_outfile( $cmd, $outfile)
+
+Adds a '#' before the command if the outfile exists.
+
+=cut
 
 sub check_4_outfile {
 	my ( $self, $cmd, $outfile ) =@_;
