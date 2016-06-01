@@ -71,7 +71,7 @@ Getopt::Long::GetOptions(
 	"-files=s{,}"     => \@files,
 	"-options=s{,}"   => \@options,
 	"-genome=s"       => \$genome,
-	"-coverage=s"       => \$coverage,
+	"-coverage=s"     => \$coverage,
 	"-paired"         => \$paired,
 	"-bigwigTracks=s" => \$bigwigTracks,
 
@@ -90,10 +90,12 @@ unless ( defined $options[0] ) {
 }
 unless ( defined $genome ) {
 	$error .= "the cmd line switch -genome is undefined!\n";
-}else {
-	my $tmp = root->filemap( $genome );
+}
+else {
+	my $tmp = root->filemap($genome);
 	unless ( -d $tmp->{'path'} ) {
-		$error .= "the cmd line switch -genome '$tmp->{'path'}'\npath not found!\n";
+		$error .=
+		  "the cmd line switch -genome '$tmp->{'path'}'\npath not found!\n";
 	}
 }
 $coverage ||= '';
@@ -104,9 +106,10 @@ unless ( -f $coverage ) {
 else {
 	unless ( defined $bigwigTracks ) {
 		$error .= "the cmd line switch -bigwigTracks  is undefined!\n";
-	}else {
-		my $tmp = root->filemap( $bigwigTracks ) ;
-		unless ( -d $tmp->{'path'} ){
+	}
+	else {
+		my $tmp = root->filemap($bigwigTracks);
+		unless ( -d $tmp->{'path'} ) {
 			mkdir( $tmp->{'path'} );
 		}
 	}
@@ -136,10 +139,11 @@ $task_description .= '       -files "' . join( '" "', @files ) . '"'
   if ( defined $files[0] );
 $task_description .= '       -options "' . join( '" "', @options ) . '"'
   if ( defined $options[0] );
-$task_description .= " -genome '$genome'" if ( defined $genome );
-$task_description .= " -paired" if ($paired);
-$task_description .= " -coverage '$coverage'" if ( -f $coverage);
-$task_description .= " -bigwigTracks '$bigwigTracks'" if ( defined $bigwigTracks);
+$task_description .= " -genome '$genome'"     if ( defined $genome );
+$task_description .= " -paired"               if ($paired);
+$task_description .= " -coverage '$coverage'" if ( -f $coverage );
+$task_description .= " -bigwigTracks '$bigwigTracks'"
+  if ( defined $bigwigTracks );
 
 for ( my $i = 0 ; $i < @options ; $i += 2 ) {
 	$options[ $i + 1 ] =~ s/\n/ /g;
@@ -157,26 +161,29 @@ foreach (qw(n N t mem)) {
 	delete( $options->{$_} );
 }
 
-
 ##### load the modules that are needed first!
 ## therefore I need to create a script file and run that using bash
 $fm = root->filemap( $files[0] );
-open ( SC, ">$fm->{'path'}/InitializeSLURMenv.sh") or die "I could not create the SLURM init script\n$!\n";
+open( SC, ">$fm->{'path'}/InitializeSLURMenv.sh" )
+  or die "I could not create the SLURM init script\n$!\n";
 
-foreach ( 
-'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048', ## Bowtie2/2.2.6 and SAMtools/0.1.20
-'ifort/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048', ## Bowtie2/2.2.6 and SAMtools/0.1.20
-'Bowtie2/2.2.6', 'SAMtools/0.1.20',
-'GCC/4.9.2  OpenMPI/1.8.4', ## BEDTools/2.25.0
-'BEDTools/2.25.0',
-) {
+foreach (
+	'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048'
+	,    ## Bowtie2/2.2.6 and SAMtools/0.1.20
+	'ifort/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048'
+	,    ## Bowtie2/2.2.6 and SAMtools/0.1.20
+	'Bowtie2/2.2.6', 'SAMtools/0.1.20',
+	'GCC/4.9.2  OpenMPI/1.8.4',    ## BEDTools/2.25.0
+	'BEDTools/2.25.0',
+	'libpng/1.6.19',               ## bedGraphToBigWig needs that
+  )
+{
 	print SC "module add $_\n";
 }
-close ( SC );
-unless ( $debug ) {
-	system( "bash $fm->{'path'}/InitializeSLURMenv.sh" );
+close(SC);
+unless ($debug) {
+	system("bash $fm->{'path'}/InitializeSLURMenv.sh");
 }
-
 
 my $files_modified = 0;
 $cmd = "bowtie2 -x $genome ";
@@ -184,51 +191,55 @@ foreach my $key ( keys %$options ) {
 	$cmd .= " -$key $options->{$key}";
 }
 for ( my $i = 0 ; $i < @files ; $i++ ) {
-	if ( $files[$i] =~ m/\s/ ){
+	if ( $files[$i] =~ m/\s/ ) {
 		$tmp = $files[$i];
 		$tmp =~ s/\s+/_/g;
 		warn "I rename the file $files[$i] to $tmp\n";
 		print "mv '$files[$i]' $tmp\n";
-		system( "mv '$files[$i]' $tmp");
+		system("mv '$files[$i]' $tmp");
 		$files_modified = 1;
 		$files[$i] = $tmp;
 	}
 }
 
-Carp::confess ( "Files were moved/renamed - please re-run!\n" ) if ( $files_modified );
+Carp::confess("Files were moved/renamed - please re-run!\n")
+  if ($files_modified);
 
 if ($paired) {
 	for ( my $i = 0 ; $i < @files ; $i += 2 ) {
 		$this_cmd = $cmd;
 		$fm       = root->filemap( $files[$i] );
-		$this_outfile = "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam";
+		$this_outfile =
+		  "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam";
 		unless ( -d $fm->{'path'} . "/bowtie2" ) {
 			mkdir( $fm->{'path'} . "/bowtie2" );
 		}
 		$this_cmd .= " -1 '$files[$i]' -2 '" . $files[ $i + 1 ] . "'";
-		$this_cmd .=
-		  " -S $this_outfile\n";
-		$this_cmd = $SLURM->check_4_outfile($this_cmd, "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sorted.bam" );
+		$this_cmd .= " -S $this_outfile\n";
+		$this_cmd = $SLURM->check_4_outfile( $this_cmd,
+			"$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sorted.bam" );
 		$this_cmd .= &convert($fm);
 		$this_cmd .= &bigwig($fm);
-		$SLURM->run( $this_cmd, $fm,$this_outfile );
+		$SLURM->run( $this_cmd, $fm, $this_outfile );
 	}
 }
 else {
 	for ( my $i = 0 ; $i < @files ; $i++ ) {
 		$this_cmd = $cmd;
 		$fm       = root->filemap( $files[$i] );
-		$this_outfile = "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam";
+		$this_outfile =
+		  "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam";
 		unless ( -d $fm->{'path'} . "/bowtie2" ) {
 			mkdir( $fm->{'path'} . "/bowtie2" );
 		}
 		$this_cmd .= " -U '$files[$i]'";
 		$this_cmd .=
 		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam\n";
-		$this_cmd = $SLURM->check_4_outfile($this_cmd, "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sorted.bam" );
+		$this_cmd = $SLURM->check_4_outfile( $this_cmd,
+			"$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sorted.bam" );
 		$this_cmd .= &convert($fm);
 		$this_cmd .= &bigwig($fm);
-		$SLURM->run( $this_cmd, $fm,  );
+		$SLURM->run( $this_cmd, $fm, );
 	}
 }
 
@@ -237,19 +248,19 @@ if ( @big_wig_urls > 0 ) {
 	  or die "I could not create the bigwig outfile '$bigwigTracks'\n$!\n";
 	print OUT join( "\n", @big_wig_urls );
 	close(OUT);
-	print join( "\n", @big_wig_urls )."\n\n";
-	open ( LOG , ">$bigwigTracks.log" ) or die "I could not open the log file '$bigwigTracks.log'\n$!\n";
-	print LOG $task_description ."\n";
-	close ( LOG );
+	print join( "\n", @big_wig_urls ) . "\n\n";
+	open( LOG, ">$bigwigTracks.log" )
+	  or die "I could not open the log file '$bigwigTracks.log'\n$!\n";
+	print LOG $task_description . "\n";
+	close(LOG);
 }
 
-if ( $debug ) {
+if ($debug) {
 	$fm = root->filemap( $files[0] );
-	print "before you run the sbatch calls make sure you have loaded all required modules.\n".
-		"I recommend: 'bash $fm->{'path'}/InitializeSLURMenv.sh'\n";
+	print
+"before you run the sbatch calls make sure you have loaded all required modules.\n"
+	  . "I recommend: 'bash $fm->{'path'}/InitializeSLURMenv.sh'\n";
 }
-
-
 
 sub convert {
 	my $fm = shift;
@@ -257,12 +268,11 @@ sub convert {
 	my $p  = $options->{'p'};
 	$p ||= 2;
 	return join(
-		"\n", map { $SLURM->check_4_outfile( $_, "$f.sorted.bam") } 
-		"samtools view -Sb  $f.sam | samtools sort -\@ "
+		"\n", map { $SLURM->check_4_outfile( $_, "$f.sorted.bam" ) }
+		  "samtools view -Sb  $f.sam | samtools sort -\@ "
 		  . ( $p - 1 )
 		  . " - $f.sorted",
-		"if  [ -f $f.sorted.bam ]&&[ -s $f.sorted.bam ]; then
-rm -f $f.sam",
+		"if  [ -f $f.sorted.bam ]&&[ -s $f.sorted.bam ]; then", "rm -f $f.sam",
 		"fi\n"
 	);
 }
@@ -270,18 +280,28 @@ rm -f $f.sam",
 sub bigwig {
 	my $fm = shift;
 	my $infile =
-	  $fm->{'path'} . "/bowtie2/" . $fm->{'filename_core'} . "_bowtie2.sorted.bam";
+	    $fm->{'path'}
+	  . "/bowtie2/"
+	  . $fm->{'filename_core'}
+	  . "_bowtie2.sorted.bam";
 	return "## no -coverage option - no bigwig conversion\n"
 	  unless ( -f $coverage );
 	my $outfile =
-	  $fm->{'path'} . "/bowtie2/" . $fm->{'filename_core'} . "_bowtie2.bedGraph";
-	my $cmd = $SLURM->check_4_outfile( "bedtools genomecov -bg -split -ibam $infile -g $coverage | sort -k1,1 -k2,2n > $outfile\n", $outfile );
+	    $fm->{'path'}
+	  . "/bowtie2/"
+	  . $fm->{'filename_core'}
+	  . "_bowtie2.bedGraph";
+	my $cmd = $SLURM->check_4_outfile(
+"bedtools genomecov -bg -split -ibam $infile -g $coverage | sort -k1,1 -k2,2n > $outfile\n",
+		$outfile
+	);
 
 	$infile = $outfile;
 	$outfile =~ s/.bedGraph$/.bw/;
-	$cmd .= $SLURM->check_4_outfile( "bedGraphToBigWig $infile $coverage $outfile\n", $outfile );
-	push(
-		@big_wig_urls,
+	$cmd .=
+	  $SLURM->check_4_outfile( "bedGraphToBigWig $infile $coverage $outfile\n",
+		$outfile );
+	push( @big_wig_urls,
 "track type=bigWig name=\"$fm->{'filename_core'}\" description=\"$fm->{'filename_core'}\""
 		  . " bigDataUrl=http://bone.bmc.lu.se/Public/$fm->{'filename_core'}_bowtie2.bw"
 	);
