@@ -21,6 +21,7 @@
        -files     :a list of fastq or fastq.gz files   
        -options   :additional options in the format
                    key_1 value_1 key_2 value_2 ... key_n value_n
+                   recommended: n 10 N 1 mem 4000M t '02:02:00' p 10
        -genome    :the genome definition as used by bowtie2 -X
        -coverage  :the genome coverage file to create bigwig tracks
        -paired    :if you have paired data to map use this option and
@@ -95,6 +96,7 @@ unless ( defined $genome ) {
 		$error .= "the cmd line switch -genome '$tmp->{'path'}'\npath not found!\n";
 	}
 }
+$coverage ||= '';
 unless ( -f $coverage ) {
 	$warn .=
 "bigwig files can not be created unless you give me the right genome coverage file (-coverage)\n";
@@ -136,6 +138,8 @@ $task_description .= '       -options "' . join( '" "', @options ) . '"'
   if ( defined $options[0] );
 $task_description .= " -genome '$genome'" if ( defined $genome );
 $task_description .= " -paired" if ($paired);
+$task_description .= " -coverage '$coverage'" if ( -f $coverage);
+$task_description .= " -bigwigTracks '$bigwigTracks'" if ( defined $bigwigTracks);
 
 for ( my $i = 0 ; $i < @options ; $i += 2 ) {
 	$options[ $i + 1 ] =~ s/\n/ /g;
@@ -243,7 +247,7 @@ if ( $debug ) {
 
 sub convert {
 	my $fm = shift;
-	my $f  = $fm->{'path'} . "bowtie2/" . $fm->{'filename'} . "_bowtie2";
+	my $f  = $fm->{'path'} . "/bowtie2/" . $fm->{'filename'} . "_bowtie2";
 	my $p  = $options->{'p'};
 	$p ||= 2;
 	return join(
@@ -260,11 +264,11 @@ rm -f $f.sam",
 sub bigwig {
 	my $fm = shift;
 	my $infile =
-	  $fm->{'path'} . "bowtie2/" . $fm->{'filename'} . "_bowtie2.sorted.bam";
+	  $fm->{'path'} . "/bowtie2/" . $fm->{'filename'} . "_bowtie2.sorted.bam";
 	return "## no -coverage option - no bigwig conversion\n"
 	  unless ( -f $coverage );
 	my $outfile =
-	  $fm->{'path'} . "bowtie2/" . $fm->{'filename'} . "_bowtie2.bedGraph";
+	  $fm->{'path'} . "/bowtie2/" . $fm->{'filename'} . "_bowtie2.bedGraph";
 	my $cmd =
 	  "bedtools genomecov -bg -split -ibam $infile -g $coverage > $outfile\n";
 
