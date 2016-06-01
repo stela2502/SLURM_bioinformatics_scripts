@@ -140,7 +140,11 @@ sub check_4_outfile {
 sub check {
 	my ( $self, @require ) =@_;
 	my $error = '';
-	map { unless (defined $self->{$_}){ $error .= "MISSING SLURM option $_\n" } } @require;
+	my $type = 'downstream program';
+	if ( ref( $self ) eq "stefans_libs::SLURM"){
+		$type = 'SLURM';
+	}
+	map { unless (defined $self->{$_}){ $error .= "MISSING $type option $_\n" } } @require;
 	Carp::confess ( $error ) if ( $error =~ m/\w/ );
 }
 

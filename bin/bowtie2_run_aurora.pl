@@ -153,6 +153,10 @@ print "\$exp =  " . root->print_perl_var_def($options) . ";\n";
 ## Do whatever you want!
 my ( $cmd, $fm, $this_cmd, @big_wig_urls, $tmp, $this_outfile );
 
+$options ->{'n'} ||=10;
+$options ->{'N'} ||=1;
+$options ->{'t'} ||='02:00:00';
+
 my $SLURM = stefans_libs::SLURM->new($options);
 $SLURM->{'debug'} = 1 if ($debug);
 
@@ -175,7 +179,7 @@ foreach (
 	'Bowtie2/2.2.6', 'SAMtools/0.1.20',
 	'GCC/4.9.2  OpenMPI/1.8.4',    ## BEDTools/2.25.0
 	'BEDTools/2.25.0',
-	'libpng/1.6.19',               ## bedGraphToBigWig needs that
+	#'libpng/1.6.19',               ## bedGraphToBigWig needs that
   )
 {
 	print SC "module add $_\n";
