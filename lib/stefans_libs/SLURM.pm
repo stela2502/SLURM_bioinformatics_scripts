@@ -113,8 +113,14 @@ sub run {
 	print OUT $s;
 	close ( OUT );
 	print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
+	my @ALL = split("\n", $cmd);
+	my @COMMENT = grep( "^#", @ALL );
 	unless ( $self->{'debug'}) {
-		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" );
+		unless ( @ALL == @COMMENT) {
+			system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" )
+		}else {
+			print "Useless to run scrip - no commands in the file\n";
+		}
 	}
 	return 1;
 }
