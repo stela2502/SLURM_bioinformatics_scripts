@@ -119,6 +119,11 @@ sub run {
 	return 1;
 }
 
+sub check_4_outfile {
+	my ( $self, $cmd, $outfile ) =@_;
+	$cmd = "#$cmd" if ( -f $outfile );
+	return $cmd;
+}
 
 sub check {
 	my ( $self, @require ) =@_;

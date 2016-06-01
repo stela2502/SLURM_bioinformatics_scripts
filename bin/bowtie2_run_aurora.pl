@@ -147,7 +147,7 @@ for ( my $i = 0 ; $i < @options ; $i += 2 ) {
 }
 print "\$exp =  " . root->print_perl_var_def($options) . ";\n";
 ## Do whatever you want!
-my ( $cmd, $fm, $this_cmd, @big_wig_urls, $tmp );
+my ( $cmd, $fm, $this_cmd, @big_wig_urls, $tmp, $this_outfile );
 
 my $SLURM = stefans_libs::SLURM->new($options);
 $SLURM->{'debug'} = 1 if ($debug);
@@ -201,38 +201,34 @@ if ($paired) {
 	for ( my $i = 0 ; $i < @files ; $i += 2 ) {
 		$this_cmd = $cmd;
 		$fm       = root->filemap( $files[$i] );
+		$this_outfile = "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam";
 		unless ( -d $fm->{'path'} . "/bowtie2" ) {
 			mkdir( $fm->{'path'} . "/bowtie2" );
 		}
 		$this_cmd .= " -1 '$files[$i]' -2 '" . $files[ $i + 1 ] . "'";
 		$this_cmd .=
-		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam\n";
-		if ( -f "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam" ) {
-			$this_cmd = "#$this_cmd";
-			warn "to re-run mapping remove the file '$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam'";
-		}
+		  " -S $this_outfile\n";
+		$this_cmd = $SLURM->check_4_outfile($this_cmd, $this_outfile );
 		$this_cmd .= &convert($fm);
 		$this_cmd .= &bigwig($fm);
-		$SLURM->run( $this_cmd, $fm ) unless ( -f $fm->{'path'} . "bowtie2/" . $fm->{'filename'} . "_bowtie2.bedGraph");
+		$SLURM->run( $this_cmd, $fm,$this_outfile );
 	}
 }
 else {
 	for ( my $i = 0 ; $i < @files ; $i++ ) {
 		$this_cmd = $cmd;
 		$fm       = root->filemap( $files[$i] );
+		$this_outfile = "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam";
 		unless ( -d $fm->{'path'} . "/bowtie2" ) {
 			mkdir( $fm->{'path'} . "/bowtie2" );
 		}
 		$this_cmd .= " -U '$files[$i]'";
 		$this_cmd .=
 		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam\n";
-		if ( -f "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam" ) {
-			$this_cmd = "#$this_cmd";
-			warn "to re-run mapping remove the file '$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam'";
-		}
+		$this_cmd = $SLURM->check_4_outfile($this_cmd, $this_outfile );
 		$this_cmd .= &convert($fm);
 		$this_cmd .= &bigwig($fm);
-		$SLURM->run( $this_cmd, $fm ) unless ( -f $fm->{'path'} . "bowtie2/" . $fm->{'filename'} . "_bowtie2.bedGraph");
+		$SLURM->run( $this_cmd, $fm,  );
 	}
 }
 
@@ -261,7 +257,7 @@ sub convert {
 	my $p  = $options->{'p'};
 	$p ||= 2;
 	return join(
-		"\n",
+		"\n", map { $SLURM->check_4_outfile( $_, "$f.sorted.bam") } 
 		"samtools view -Sb  $f.sam | samtools sort -\@ "
 		  . ( $p - 1 )
 		  . " - $f.sorted",
@@ -279,12 +275,11 @@ sub bigwig {
 	  unless ( -f $coverage );
 	my $outfile =
 	  $fm->{'path'} . "/bowtie2/" . $fm->{'filename_core'} . "_bowtie2.bedGraph";
-	my $cmd =
-	  "bedtools genomecov -bg -split -ibam $infile -g $coverage > $outfile\n";
+	my $cmd = $SLURM->check_4_outfile( "bedtools genomecov -bg -split -ibam $infile -g $coverage > $outfile\n", $outfile );
 
 	$infile = $outfile;
 	$outfile =~ s/.bedGraph$/.bw/;
-	$cmd .= "bedGraphToBigWig $infile $coverage $outfile\n";
+	$cmd .= $SLURM->check_4_outfile( "bedGraphToBigWig $infile $coverage $outfile\n", $outfile );
 	push(
 		@big_wig_urls,
 "track type=bigWig name=\"$fm->{'filename_core'}\" description=\"$fm->{'filename_core'}\""
