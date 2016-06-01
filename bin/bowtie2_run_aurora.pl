@@ -208,7 +208,7 @@ if ($paired) {
 		$this_cmd .= " -1 '$files[$i]' -2 '" . $files[ $i + 1 ] . "'";
 		$this_cmd .=
 		  " -S $this_outfile\n";
-		$this_cmd = $SLURM->check_4_outfile($this_cmd, "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.bam" );
+		$this_cmd = $SLURM->check_4_outfile($this_cmd, "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sorted.bam" );
 		$this_cmd .= &convert($fm);
 		$this_cmd .= &bigwig($fm);
 		$SLURM->run( $this_cmd, $fm,$this_outfile );
@@ -225,7 +225,7 @@ else {
 		$this_cmd .= " -U '$files[$i]'";
 		$this_cmd .=
 		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam\n";
-		$this_cmd = $SLURM->check_4_outfile($this_cmd, "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.bam" );
+		$this_cmd = $SLURM->check_4_outfile($this_cmd, "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sorted.bam" );
 		$this_cmd .= &convert($fm);
 		$this_cmd .= &bigwig($fm);
 		$SLURM->run( $this_cmd, $fm,  );
