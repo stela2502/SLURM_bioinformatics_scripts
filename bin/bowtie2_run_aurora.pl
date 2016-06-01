@@ -158,9 +158,16 @@ foreach (qw(n N t mem)) {
 ## therefore I need to create a script file and run that using bash
 $fm = root->filemap( $files[0] );
 open ( SC, ">$fm->{'path'}/InitializeSLURMenv.sh") or die "I could not create the SLURM init script\n$!\n";
-print SC join("\n",  "module add GCC/4.9.2  OpenMPI/1.8.4", "module add BEDTools/2.25.0" , "module add SAMtools/1.3" ,
-"module add icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048", "module add ifort/2016.1.150-GCC-4.9.3-2.25  impi/5.1.2.150",
- "module add libpng/1.6.21" , "module add Bowtie2/2.2.6");
+
+foreach ( 
+'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048', ## Bowtie2/2.2.6 and SAMtools/0.1.20
+'ifort/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048', ## Bowtie2/2.2.6 and SAMtools/0.1.20
+'Bowtie2/2.2.6', 'SAMtools/0.1.20',
+'GCC/4.9.2  OpenMPI/1.8.4', ## BEDTools/2.25.0
+'BEDTools/2.25.0',
+) {
+	print SC "module add $_\n";
+}
 close ( SC );
 unless ( $debug ) {
 	system( "bash $fm->{'path'}/InitializeSLURMenv.sh" );
