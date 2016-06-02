@@ -4,6 +4,7 @@ use Getopt::Long;
 use Pod::Usage;
 use stefans_libs::root;
 use stefans_libs::SLURM;
+use stefans_libs::flexible_data_structures::data_table;
 
 =head1 LICENCE
 
@@ -76,7 +77,21 @@ unless ( -f $files[0]) {
 	$error .= "the cmd line switch -files is undefined!\n";
 }
 unless ( -f $cfiles[0]) {
-	$error .= "the cmd line switch -cfiles is undefined!\n";
+	my $d = data_table->new ( {'filename' => $files[0] } );
+	if ( defined $d->Header_Position( 'files') ) {
+		@files = @{$d->GetAsArray('files')};
+		unless ( -f $files[0]) {
+			$error .= "the cmd line switch -files is undefined!\n";
+		}
+	}
+	if ( defined $d->Header_Position( 'cfiles') ){
+		@cfiles = @{$d->GetAsArray('cfiles')};
+		unless ( -f $cfiles[0]) {
+			$error .= "the cmd line switch -cfiles is undefined!\n";
+		}
+	}else {
+		$error .= "the cmd line switch -cfiles is undefined!\n";
+	}
 }
 unless ( defined $options[0]) {
 	$error .= "the cmd line switch -options is undefined!\n";
