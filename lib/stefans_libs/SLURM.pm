@@ -148,4 +148,22 @@ sub check {
 	Carp::confess ( $error ) if ( $error =~ m/\w/ );
 }
 
+sub get_options_from_script{
+	my ( $self, $filename ) = @_;
+	my $ignore = { 'J'=> 1, 'o' =>1, 'e' =>1 };
+	unless ( -f $filename ) {
+		warn "I can not read from a not existinf file '$filename' at stefans_libs::SLURM::get_options_from_script\n";
+		return $self;
+	}
+	else {
+		open ( IN, "<$filename" ) or die $!;
+		while ( <IN> ) {
+			if ( $_ =~m/^#SBATCH \-+(\w+)\s+(.+)\s*\n/ ) {
+				$self->{$1} = $2 unless ( $ignore->{$1} );
+			}
+		}
+	}
+	return $self;
+}
+
 1;

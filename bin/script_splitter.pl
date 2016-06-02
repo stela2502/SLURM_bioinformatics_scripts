@@ -103,7 +103,6 @@ close ( LOG );
 
 ## Do whatever you want!
 my ( $i, $script, $SLURM, $fm );
-$header = '';
 $i = 1;
 $SLURM = stefans_libs::SLURM->new();
 $SLURM->get_options_from_script($infile);
