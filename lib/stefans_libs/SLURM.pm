@@ -19,6 +19,7 @@ package stefans_libs::SLURM;
 use strict;
 use warnings;
 
+use stefans_libs::root;
 
 =for comment
 
