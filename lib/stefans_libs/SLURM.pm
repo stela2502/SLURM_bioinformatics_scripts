@@ -115,7 +115,7 @@ sub run {
 	close ( OUT );
 	print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
 	my @ALL = split("\n", $cmd);
-	my @OK = grep( ! "^#", @ALL );
+	my @OK = grep( ! /^#/, @ALL );
 	@OK = grep ( ! /^\s*$/, @OK );
 	unless ( $self->{'debug'}) {
 		if ( @OK > 0 ) {
