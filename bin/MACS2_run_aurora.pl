@@ -157,10 +157,10 @@ for ( my $i = 0; $i <@files; $i ++ ) {
 	$cfile= $cfiles[$i];
 	Carp::confess ( "control bam file '$file' does not exist\n$!\n") unless ( -f $cfile);
 	( $tmp, $fm ) = &rmdup( root->filemap( $file ) );
-	$cmd = $tmp;
+	$cmd = "$tmp";
 	print "The file rmdup command: $tmp\n";
 	( $tmp, $cfm ) = &rmdup( root->filemap( $cfile ) );
-	$cmd .= $tmp;
+	$cmd .= "$tmp";
 	print "The cfile rmdup command: $tmp\n";
 	$fm->{'path'}.="/MACS2_out";
 	mkdir ( $fm->{'path'} ) unless ( -d $fm->{'path'} );
