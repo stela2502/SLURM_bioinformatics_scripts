@@ -1,4 +1,4 @@
-#! /usr/bin/perl -w
+# /usr/bin/perl -w
 
 #  Copyright (C) 2016-05-31 Stefan Lang
 
@@ -173,15 +173,9 @@ open( SC, ">$fm->{'path'}/InitializeSLURMenv.sh" )
 
 foreach (
 	'GCC/4.9.3-2.25 OpenMPI/1.10.2',
-	'SAMtools/1.3.1 Bowtie2/2.2.8 BEDTools/2.25.0'
-	#'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048'
-	#,    ## Bowtie2/2.2.6 and SAMtools/0.1.20
-	#'ifort/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048'
-	#,    ## Bowtie2/2.2.6 and SAMtools/0.1.20
-	#'Bowtie2/2.2.6', 'SAMtools/0.1.20',
-	#'GCC/4.9.2  OpenMPI/1.8.4',    ## BEDTools/2.25.0
-	#'BEDTools/2.25.0',
-	#'libpng/1.6.19',               ## bedGraphToBigWig needs that
+	'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048',
+	'SAMtools/0.1.20 Bowtie2/2.2.8 BEDTools/2.25.0',
+	#'libpng/1.6.19',               ## bedGraphToBigWig would need that - not supported at all
   )
 {
 	print SC "module load $_\n";
