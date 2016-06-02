@@ -1,19 +1,21 @@
 # /usr/bin/perl -w
 
-#  Copyright (C) 2016-05-31 Stefan Lang
+=head1 LICENCE
 
-#  This program is free software; you can redistribute it
-#  and/or modify it under the terms of the GNU General Public License
-#  as published by the Free Software Foundation;
-#  either version 3 of the License, or (at your option) any later version.
+  Copyright (C) 2016-05-31 Stefan Lang
 
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-#  See the GNU General Public License for more details.
+  This program is free software; you can redistribute it
+  and/or modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation;
+  either version 3 of the License, or (at your option) any later version.
 
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, see <http://www.gnu.org/licenses/>.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 =head1  SYNOPSIS
 
@@ -43,9 +45,9 @@
   
 =head1 DESCRIPTION
 
-This script takes a  list of fastq or fastq.gz files, created a folder named bowtie2 below these files and outputs the processed data there. Use -debug to not start the SBIN script.
+  This script takes a  list of fastq or fastq.gz files, created a folder named bowtie2 below these files and outputs the processed data there. Use -debug to not start the SBIN script.
 
-To get further help use 'bowtie2_run_aurora.pl -help' at the comman line.
+  To get further help use 'bowtie2_run_aurora.pl -help' at the comman line.
 
 =cut
 
