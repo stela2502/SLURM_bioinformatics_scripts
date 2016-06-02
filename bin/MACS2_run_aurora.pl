@@ -30,9 +30,10 @@ use stefans_libs::flexible_data_structures::data_table;
        -cfiles    :the control sorted.bam files or sorted.rmdup.bam files you have
        -options   :additional options to the MACS2 in the format
                    key_1 value_1 key_2 value_2 ... key_n value_n
+                   e.g.: g hs f BAM q 0.01
        -broad     :whether to call broad peaks or not
        -bigWig    :produce bigwig files?
-       -rmdup     :drop pcr duplicates?
+       -normdup   :NOT drop pcr duplicates?
 
 
        -help   :print this help
@@ -157,8 +158,10 @@ for ( my $i = 0; $i <@files; $i ++ ) {
 	Carp::confess ( "control bam file '$file' does not exist\n$!\n") unless ( -f $cfile);
 	( $tmp, $fm ) = &rmdup( root->filemap( $file ) );
 	$cmd = $tmp;
+	print "The file rmdup command: $tmp\n";
 	( $tmp, $cfm ) = &rmdup( root->filemap( $cfile ) );
 	$cmd .= $tmp;
+	print "The cfile rmdup command: $tmp\n";
 	$fm->{'path'}.="/MACS2_out";
 	mkdir ( $fm->{'path'} ) unless ( -d $fm->{'path'} );
 	$outfile = "$fm->{'path'}/$fm->{'filename_core'}";
