@@ -111,7 +111,7 @@ $fm = root->filemap( $outfile );
 open ( IN, "<$infile" ) or die "I could not open the infile '$infile'\n$!\n";
 while ( <IN> ) {
 	unless (  $_ =~ m/^#/ ) {
-		$script = join('.',$outfile,$i++,'sh');
+		$script = join('.',$outfile,$i,'sh');
 		$SLURM -> run ( $_, { path =>  $fm->{'path'}, filename_core => $fm->{'filename_core'}."_".$i++} );
 	}
 }
