@@ -1,5 +1,10 @@
 # /usr/bin/perl -w
 
+use Getopt::Long;
+use Pod::Usage;
+use stefans_libs::root;
+use stefans_libs::SLURM;
+
 =head1 LICENCE
 
   Copyright (C) 2016-05-31 Stefan Lang
@@ -50,11 +55,6 @@
   To get further help use 'bowtie2_run_aurora.pl -help' at the comman line.
 
 =cut
-
-use Getopt::Long;
-use Pod::Usage;
-use stefans_libs::root;
-use stefans_libs::SLURM;
 
 use strict;
 use warnings;

@@ -1,5 +1,10 @@
 #! /usr/bin/perl -w
 
+use Getopt::Long;
+use Pod::Usage;
+use stefans_libs::root;
+use stefans_libs::SLURM;
+
 =head1 LICENCE
 
   Copyright (C) 2016-06-01 Stefan Lang
@@ -40,10 +45,6 @@
 
 =cut
 
-use Getopt::Long;
-use Pod::Usage;
-use stefans_libs::SLURM;
-use stefans_libs::root;
 
 use strict;
 use warnings;
