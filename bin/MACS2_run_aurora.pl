@@ -140,7 +140,7 @@ $options ->{'t'} ||='02:00:00';
 
 
 ## Do whatever you want!
-my ( $SLURM, $cmd, $tmp, $outfile, $file, $cfile, $fm, $cfm );
+my ( $SLURM, $cmd, $tmp, $outfile, $file, $cfile, $fm, $cfm, $tmp2 );
 $SLURM = stefans_libs::SLURM->new( $options );
 
 ## kick all SLURM options that should not be used for the MACS2
@@ -159,9 +159,9 @@ for ( my $i = 0; $i <@files; $i ++ ) {
 	( $tmp, $fm ) = &rmdup( root->filemap( $file ) );
 	$cmd = "$tmp";
 	print "The file rmdup command: $tmp\n";
-	( $tmp, $cfm ) = &rmdup( root->filemap( $cfile ) );
-	$cmd .= "$tmp";
-	print "The cfile rmdup command: $tmp\n";
+	( $tmp2, $cfm ) = &rmdup( root->filemap( $cfile ) );
+	$cmd .= "$tmp2";
+	print "The cfile rmdup command: $tmp2\n";
 	$fm->{'path'}.="/MACS2_out";
 	mkdir ( $fm->{'path'} ) unless ( -d $fm->{'path'} );
 	$outfile = "$fm->{'path'}/$fm->{'filename_core'}";
