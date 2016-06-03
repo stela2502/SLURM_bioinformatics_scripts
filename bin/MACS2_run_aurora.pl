@@ -153,7 +153,7 @@ open( SC, ">$fm->{'path'}/InitializeSLURMenvMACS2.sh" )
 foreach (
 	'GCC/4.9.3-2.25 OpenMPI/1.10.2',
 	'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048',
-	'SAMtools/0.1.20 Bowtie2/2.2.8 BEDTools/2.25.0',
+	'SAMtools/0.1.20 ','MACS2/2.1.0.20150731-Python-2.7.11'
 	#'libpng/1.6.19',               ## bedGraphToBigWig would need that - not supported at all
   )
 {
