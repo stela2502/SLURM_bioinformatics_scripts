@@ -183,7 +183,7 @@ for ( my $i = 0; $i <@files; $i ++ ) {
 	$fm->{'path'}.="/MACS2_out";
 	mkdir ( $fm->{'path'} ) unless ( -d $fm->{'path'} );
 	$outfile = "$fm->{'path'}/$fm->{'filename_core'}";
-	$cmd .= $SLURM->check_4_outfile( "MACS2 -t $fm->{'total'} -c $cfm->{'total'} ", $outfile."_peaks.bed");
+	$cmd .= $SLURM->check_4_outfile( "macs2 -t $fm->{'total'} -c $cfm->{'total'} ", $outfile."_peaks.bed");
 	foreach my $key ( keys %$options ) {
 		$cmd .= " -$key $options->{$key}";
 	}
