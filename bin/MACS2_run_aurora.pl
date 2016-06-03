@@ -142,14 +142,33 @@ $options ->{'t'} ||='02:00:00';
 ## Do whatever you want!
 my ( $SLURM, $cmd, $tmp, $outfile, $file, $cfile, $fm, $cfm, $tmp2 );
 $SLURM = stefans_libs::SLURM->new( $options );
+$SLURM->{'debug'} = 1 if ( $debug );
+stefans_libs::SLURM::check( $options, qw( f g q ) );
 
+
+$fm = root->filemap( $files[0] );
+open( SC, ">$fm->{'path'}/InitializeSLURMenvMACS2.sh" )
+  or die "I could not create the SLURM init script\n$!\n";
+
+foreach (
+	'GCC/4.9.3-2.25 OpenMPI/1.10.2',
+	'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048',
+	'SAMtools/0.1.20 Bowtie2/2.2.8 BEDTools/2.25.0',
+	#'libpng/1.6.19',               ## bedGraphToBigWig would need that - not supported at all
+  )
+{
+	print SC "module load $_\n";
+}
 ## kick all SLURM options that should not be used for the MACS2
 foreach (qw(n N t mem)) {
 	delete( $options->{$_} );
 }
+close(SC);
+unless ($debug) {
+	system("bash $fm->{'path'}/InitializeSLURMenvMACS2.sh");
+}
 
-$SLURM->{'debug'} = 1 if ( $debug );
-stefans_libs::SLURM::check( $options, qw( f g q ) );
+
 
 for ( my $i = 0; $i <@files; $i ++ ) {
 	$file = $files[$i];
