@@ -113,7 +113,7 @@ sub run {
 	open ( OUT ,">$fm->{path}/$fm->{'filename_core'}.sh" ) or Carp::confess ( "I can not create the script file '$fm->{path}/$fm->{'filename_core'}.sh'\n$!\n");
 	print OUT $s;
 	close ( OUT );
-	print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
+#	print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
 	my @ALL = split("\n", $cmd);
 	my @OK = grep( ! /^#/, @ALL );
 	@OK = grep ( ! /^\s*$/, @OK );
