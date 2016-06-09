@@ -4,6 +4,7 @@ use Getopt::Long;
 use Pod::Usage;
 use stefans_libs::root;
 use stefans_libs::SLURM;
+use stefans_libs::scripts::BAM;
 
 =head1 LICENCE
 
@@ -151,13 +152,13 @@ for ( my $i = 0 ; $i < @options ; $i += 2 ) {
 	$options[ $i + 1 ] =~ s/\n/ /g;
 	$options->{ $options[$i] } = $options[ $i + 1 ];
 }
-print "\$exp =  " . root->print_perl_var_def($options) . ";\n";
+#print "\$exp =  " . root->print_perl_var_def($options) . ";\n";
 ## Do whatever you want!
 my ( $cmd, $fm, $this_cmd, @big_wig_urls, $tmp, $this_outfile );
 
-$options ->{'n'} ||=10;
-$options ->{'N'} ||=1;
-$options ->{'t'} ||='02:00:00';
+$options->{'n'} ||= 10;
+$options->{'N'} ||= 1;
+$options->{'t'} ||= '02:00:00';
 
 my $SLURM = stefans_libs::SLURM->new($options);
 $SLURM->{'debug'} = 1 if ($debug);
@@ -166,6 +167,8 @@ $SLURM->{'debug'} = 1 if ($debug);
 foreach (qw(n N t mem)) {
 	delete( $options->{$_} );
 }
+
+my $BAM = stefans_libs::scripts::BAM->new($options);
 
 ##### load the modules that are needed first!
 ## therefore I need to create a script file and run that using bash
@@ -177,7 +180,8 @@ foreach (
 	'GCC/4.9.3-2.25 OpenMPI/1.10.2',
 	'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048',
 	'SAMtools/0.1.20 Bowtie2/2.2.8 BEDTools/2.25.0',
-	#'libpng/1.6.19',               ## bedGraphToBigWig would need that - not supported at all
+
+#'libpng/1.6.19',               ## bedGraphToBigWig would need that - not supported at all
   )
 {
 	print SC "module load $_\n";
@@ -217,11 +221,14 @@ if ($paired) {
 			mkdir( $fm->{'path'} . "/bowtie2" );
 		}
 		$this_cmd .= " -1 '$files[$i]' -2 '" . $files[ $i + 1 ] . "'";
-		$this_cmd .= " -S $this_outfile\n";
+		$this_cmd .= " -S $this_outfile";
 		$this_cmd = $SLURM->check_4_outfile( $this_cmd,
 			"$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sorted.bam" );
-		$this_cmd .= &convert($fm);
-		$this_cmd .= &bigwig($fm);
+		$this_cmd = $SLURM->check_4_outfile( $this_cmd,
+			"$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam" );
+		$this_cmd .= &chk_cmd($BAM->convert_sam_2_sorted_bam($this_outfile));
+		$this_cmd .= &chk_cmd($BAM->convert_sorted_bam_2_bedGraph($this_outfile,$coverage));
+		$this_cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage));
 		$SLURM->run( $this_cmd, $fm, $this_outfile );
 	}
 }
@@ -236,21 +243,26 @@ else {
 		}
 		$this_cmd .= " -U '$files[$i]'";
 		$this_cmd .=
-		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam\n";
-		$this_cmd = $SLURM->check_4_outfile( $this_cmd,
+		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam";
+		$this_cmd = &chk_cmd( $this_cmd,
 			"$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sorted.bam" );
-		$this_cmd .= &convert($fm);
-		$this_cmd .= &bigwig($fm);
-		$SLURM->run( $this_cmd, $fm, );
+		$this_cmd = $SLURM->check_4_outfile( $this_cmd,
+			"$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam" );
+		$this_cmd .= &chk_cmd(
+			$BAM->convert_sam_2_sorted_bam("$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam")
+		)."\n";
+		$this_cmd .= &chk_cmd($BAM->convert_sorted_bam_2_bedGraph($this_outfile,$coverage));
+		$this_cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage));
+		$SLURM->run( $this_cmd, $fm,$this_outfile );
 	}
 }
 
-if ( @big_wig_urls > 0 ) {
+if ( @{$BAM->{'big_wig_urls'}} > 0 ) {
 	open( OUT, ">$bigwigTracks" )
 	  or die "I could not create the bigwig outfile '$bigwigTracks'\n$!\n";
-	print OUT join( "\n", @big_wig_urls );
+	print OUT join( "\n", @{$BAM->{'big_wig_urls'}} );
 	close(OUT);
-	print join( "\n", @big_wig_urls ) . "\n\n";
+	print join( "\n", @{$BAM->{'big_wig_urls'}} ) . "\n\n";
 	open( LOG, ">$bigwigTracks.log" )
 	  or die "I could not open the log file '$bigwigTracks.log'\n$!\n";
 	print LOG $task_description . "\n";
@@ -264,49 +276,11 @@ if ($debug) {
 	  . "I recommend: 'bash $fm->{'path'}/InitializeSLURMenv.sh'\n";
 }
 
-sub convert {
-	my $fm = shift;
-	my $f  = $fm->{'path'} . "/bowtie2/" . $fm->{'filename_core'} . "_bowtie2";
-	my $p  = $options->{'p'};
-	$p ||= 2;
-	return join(
-		"\n", map { $SLURM->check_4_outfile( $_, "$f.sorted.bam" ) }
-		  "samtools view -Sb  $f.sam | samtools sort -\@ "
-		  . ( $p - 1 )
-		  . " - $f.sorted",
-		"if  [ -f $f.sorted.bam ]&&[ -s $f.sorted.bam ]; then", "rm -f $f.sam",
-		"fi\n"
-	);
-}
-
-sub bigwig {
-	my $fm = shift;
-	my $infile =
-	    $fm->{'path'}
-	  . "/bowtie2/"
-	  . $fm->{'filename_core'}
-	  . "_bowtie2.sorted.bam";
-	return "## no -coverage option - no bigwig conversion\n"
-	  unless ( -f $coverage );
-	my $outfile =
-	    $fm->{'path'}
-	  . "/bowtie2/"
-	  . $fm->{'filename_core'}
-	  . "_bowtie2.bedGraph";
-	my $cmd = $SLURM->check_4_outfile(
-"bedtools genomecov -bg -split -ibam $infile -g $coverage | sort -k1,1 -k2,2n > $outfile\n",
-		$outfile
-	);
-
-	$infile = $outfile;
-	$outfile =~ s/.bedGraph$/.bw/;
-	$cmd .=
-	  $SLURM->check_4_outfile( "bedGraphToBigWig $infile $coverage $outfile\n",
-		$outfile );
-	push( @big_wig_urls,
-"track type=bigWig name=\"$fm->{'filename_core'}\" description=\"$fm->{'filename_core'}\""
-		  . " bigDataUrl=http://bone.bmc.lu.se/Public/$fm->{'filename_core'}_bowtie2.bw"
-	);
-	return $cmd;
+sub chk_cmd {
+	my ( $cmd, $ofile ) = @_;
+	$this_outfile = $ofile;
+	return join( "\n",
+		map { $SLURM->check_4_outfile( $_, $ofile ) } split( /\n/, $cmd ) )
+	  . "\n";
 }
 
