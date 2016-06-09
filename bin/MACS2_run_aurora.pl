@@ -142,14 +142,33 @@ $options ->{'t'} ||='02:00:00';
 ## Do whatever you want!
 my ( $SLURM, $cmd, $tmp, $outfile, $file, $cfile, $fm, $cfm, $tmp2 );
 $SLURM = stefans_libs::SLURM->new( $options );
+$SLURM->{'debug'} = 1 if ( $debug );
+stefans_libs::SLURM::check( $options, qw( f g q ) );
 
+
+$fm = root->filemap( $files[0] );
+open( SC, ">$fm->{'path'}/InitializeSLURMenvMACS2.sh" )
+  or die "I could not create the SLURM init script\n$!\n";
+
+foreach (
+	'GCC/4.9.3-2.25 OpenMPI/1.10.2',
+	'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048',
+	'SAMtools/0.1.20 ','MACS2/2.1.0.20150731-Python-2.7.11'
+	#'libpng/1.6.19',               ## bedGraphToBigWig would need that - not supported at all
+  )
+{
+	print SC "module load $_\n";
+}
 ## kick all SLURM options that should not be used for the MACS2
 foreach (qw(n N t mem)) {
 	delete( $options->{$_} );
 }
+close(SC);
+unless ($debug) {
+	system("bash $fm->{'path'}/InitializeSLURMenvMACS2.sh");
+}
 
-$SLURM->{'debug'} = 1 if ( $debug );
-stefans_libs::SLURM::check( $options, qw( f g q ) );
+
 
 for ( my $i = 0; $i <@files; $i ++ ) {
 	$file = $files[$i];
@@ -157,14 +176,14 @@ for ( my $i = 0; $i <@files; $i ++ ) {
 	$cfile= $cfiles[$i];
 	Carp::confess ( "control bam file '$file' does not exist\n$!\n") unless ( -f $cfile);
 	( $tmp, $fm ) = &rmdup( root->filemap( $file ) );
-	print "The file rmdup command: $tmp\n";
+	#print "The file rmdup command: $tmp\n";
 	( $tmp2, $cfm ) = &rmdup( root->filemap( $cfile ) );
 	$cmd = "$tmp$tmp2";
-	print "The cfile rmdup command: $tmp2\n";
+	#print "The cfile rmdup command: $tmp2\n";
 	$fm->{'path'}.="/MACS2_out";
 	mkdir ( $fm->{'path'} ) unless ( -d $fm->{'path'} );
 	$outfile = "$fm->{'path'}/$fm->{'filename_core'}";
-	$cmd .= $SLURM->check_4_outfile( "MACS2 -t $fm->{'total'} -c $cfm->{'total'} ", $outfile."_peaks.bed");
+	$cmd .= $SLURM->check_4_outfile( "macs2 callpeak -t $fm->{'total'} -c $cfm->{'total'} ", $outfile."_peaks.bed");
 	foreach my $key ( keys %$options ) {
 		$cmd .= " -$key $options->{$key}";
 	}
