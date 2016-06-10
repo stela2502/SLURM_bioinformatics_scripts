@@ -2,12 +2,12 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 8;
+use Test::More tests => 4;
 
 use FindBin;
 my $plugin_path = $FindBin::Bin;
 my ( $value, $exp, $cmd );
-my $exec = $plugin_path . "/../bin/hisat_run_aurora.pl";
+my $exec = $plugin_path . "/../bin/hisat2_run_aurora.pl";
 ok( -f $exec, "the script has been found" );
 
 if ( -d "$plugin_path/data/hisat/" ) {
@@ -27,7 +27,7 @@ print "the command:\n$cmd\n";
 
 system($cmd );
 
-ok( -d "$plugin_path/data/hisat/", "outpath created" );
+ok( -d "$plugin_path/data/HISAT2_OUT/", "outpath created" );
 
 open( IN, "<$plugin_path/data/output/hisat_BigWigTrackInfo.txt" )
   or die "I could not read the created BigWigTrackInfo file\n$!\n";
@@ -53,13 +53,13 @@ $exp = [
 	'#SBATCH -J test_empty.fastq',
 	'#SBATCH -o test_empty.fastq%j.out',
 	'#SBATCH -e test_empty.fastq%j.err',
-'hisat -x /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/hg38/hg38 -U /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/test_empty.fastq.gz --threads 2 > /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT_OUT/test_empty.fastq_hisat.sam',
-'samtools view -Sb  /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT_OUT/test_empty.fastq_hisat.sam | samtools sort -@ 1 - /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT_OUT/test_empty.fastq_hisat.sorted',
-'if  [ -f /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT_OUT/test_empty.fastq_hisat.sorted.bam ]&&[ -s /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT_OUT/test_empty.fastq_hisat.sorted.bam ]; then',
-'rm -f /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT_OUT/test_empty.fastq_hisat.sam',
+"hisat2 -x $plugin_path/data/hg38/hg38 -U $plugin_path/data/test_empty.fastq.gz --threads 2 > $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam",
+"samtools view -Sb  $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam | samtools sort -@ 1 - $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted",
+"if  [ -f $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam ]&&[ -s $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam ]; then",
+"rm -f $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam",
 	'fi',
-'bedtools genomecov -bg -split -ibam /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT_OUT/test_empty.fastq_hisat.sorted.bam -g /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/fake_hg38.chrom.sizes.txt | sort -k1,1 -k2,2n > /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT_OUT/test_empty.fastq_hisat.bedGraph',
-'bedGraphToBigWig /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT_OUT/test_empty.fastq_hisat.bedGraph /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/fake_hg38.chrom.sizes.txt /home/slang/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT_OUT/test_empty.fastq_hisat.bw',
+"bedtools genomecov -bg -split -ibam $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam -g $plugin_path/data/fake_hg38.chrom.sizes.txt | sort -k1,1 -k2,2n > $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph",
+"bedGraphToBigWig $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph $plugin_path/data/fake_hg38.chrom.sizes.txt $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bw",
 	''
   ];
 

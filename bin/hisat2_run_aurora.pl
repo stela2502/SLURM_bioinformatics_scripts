@@ -182,23 +182,23 @@ sub create_call {
 	return &create_sra_call() if ( $sra );
     my $file = shift(@files);
     my $fm   = root->filemap($file);
-    mkdir ( "$fm->{'path'}/HISAT_OUT/" ) unless ( -d "$fm->{'path'}/HISAT_OUT/");
+    mkdir ( "$fm->{'path'}/HISAT2_OUT/" ) unless ( -d "$fm->{'path'}/HISAT2_OUT/");
     $fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
-"hisat -x $genome -U $fm->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT_OUT/$fm->{'filename_core'}_hisat.sam\n";
-    return $s, "$fm->{'path'}/HISAT_OUT/$fm->{'filename_core'}_hisat.sam";
+"hisat2 -x $genome -U $fm->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
+    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam";
 }
 
 sub create_sra_call {
     my $file = shift( @files);
     my $fm   = root->filemap($file);
-    mkdir ( "$fm->{'path'}/HISAT_OUT/" ) unless ( -d "$fm->{'path'}/HISAT_OUT/");
+    mkdir ( "$fm->{'path'}/HISAT2_OUT/" ) unless ( -d "$fm->{'path'}/HISAT2_OUT/");
     $fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
-"hisat -x $genome --sra-acc $fm->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT_OUT/$fm->{'filename_core'}_hisat.sam\n";
-    return $s, "$fm->{'path'}/HISAT_OUT/$fm->{'filename_core'}_hisat.sam";
+"hisat2 -x $genome --sra-acc $fm->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
+    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam";
 }
 
 sub create_paired_call {
@@ -210,11 +210,11 @@ sub create_paired_call {
     $fm2->{'path'} = "" if ( $fm2->{'path'} eq "./" );
     $fm->{'path'} .= '/' unless ( $fm->{'path'} =~ m/\/$/ );
     $fm2->{'path'} .= '/' unless ( $fm2->{'path'} =~ m/\/$/ );
-    mkdir ( "$fm->{'path'}/HISAT_OUT/" ) unless ( -d "$fm->{'path'}/HISAT_OUT/");
+    mkdir ( "$fm->{'path'}/HISAT2_OUT/" ) unless ( -d "$fm->{'path'}/HISAT2_OUT/");
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
-"hisat -x $genome -1 $fm->{'total'} -2 $fm2->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT_OUT/$fm->{'filename_core'}_hisat.sam\n";
-    return $s, "$fm->{'path'}/HISAT_OUT/$fm->{'filename_core'}_hisat.sam";
+"hisat2 -x $genome -1 $fm->{'total'} -2 $fm2->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
+    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam";
 }
 
 sub chk_cmd {
