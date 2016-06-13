@@ -36,8 +36,11 @@ The lib helps to create a SLURM batch script
 
 =head2 depends on
 
+=head2 INTERESTING
 
-=cut
+get q qlogin shell using SLURM:
+1 node 10 cores for 2h max
+srun -N 1 -n 10 t 02:00:00 --pty /bin/bash
 
 
 =head1 METHODS

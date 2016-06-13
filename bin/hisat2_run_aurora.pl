@@ -160,8 +160,7 @@ open( SC, ">$fm->{'path'}/InitializeSLURMenv.sh" )
 
 foreach (
 	'icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 HISAT2/2.0.4',
-	'GCC/4.9.3-2.25 OpenMPI/1.10.2',
-	'SAMtools/1.3.1 BEDTools/2.25.0',
+	stefans_libs::scripts::BAM->SLURUM_load(),
   )
 {
 	print SC "module load $_\n";

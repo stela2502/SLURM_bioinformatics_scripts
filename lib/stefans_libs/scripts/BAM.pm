@@ -71,6 +71,18 @@ sub new{
 
 }
 
+=head2 SLURUM_load()
+
+Returns the modules that have to be loaded into the SLURM in order to make this work.
+
+=cut
+
+sub SLURUM_load {
+	return ( 'GCC/4.9.3-2.25 OpenMPI/1.10.2',
+	'SAMtools/1.3.1 BEDTools/2.25.0',
+	'ucsc-tools/R2016a' );
+}
+
 =head2 convert_sam_2_sorted_bam ( <samfile> )
 
 Creates a set of bash commands to convert the samfile to a sorted bam file using samtools.
@@ -88,7 +100,7 @@ sub convert_sam_2_sorted_bam {
 	return join("\n",
 		 "samtools view -Sb  $f.sam | samtools sort -\@ "
 		  . ( $self->{p} - 1 )
-		  . " - $f.sorted",
+		  . " -o $f.sorted.bam -",
 		"if  [ -f $f.sorted.bam ]&&[ -s $f.sorted.bam ]; then", "rm -f $f.sam",
 		"fi"
 	), "$f.sorted.bam";
