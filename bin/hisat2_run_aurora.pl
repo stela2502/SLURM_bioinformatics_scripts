@@ -20,15 +20,19 @@
 =head1  SYNOPSIS
 
     hisat_run_aurora.pl
-       -files     :<please add some info!> you can specify more entries to that
-       -options     :<please add some info!> you can specify more entries to that
-                         format: key_1 value_1 key_2 value_2 ... key_n value_n
-                         
-       -genome       :<please add some info!>
-       -coverage       :<please add some info!>
-       -paired       :<please add some info!>
-       -bigwigTracks       :<please add some info!>
-       -sra       :<please add some info!>
+       -files     :the input fastq or sra files
+       -sra       :the files are in sra format, not fastq
+       -options   :format: key_1 value_1 key_2 value_2 ... key_n value_n
+       		n    :number of cores per node (default = 10 )
+            N    :number of nodes (default =1)
+            t    :time untill the script is stopped (default =02:00:0 (2h))
+            proc :hisat 2 number of threads (default = n*N )      
+                   
+       -genome       :the hisat2 genome information path
+       -coverage     :the chromome length file
+       -paired       :analyse paried fasta files 
+                      every first file == read 1 every second == read2
+       -bigwigTracks :the bigwig tracks file you can upload to the USCS genome browser
 
 
        -help           :print this help
@@ -139,6 +143,8 @@ my ( $cmd, $fm, @big_wig_urls, $tmp, $this_outfile );
 $options->{'n'} ||= 10;
 $options->{'N'} ||= 1;
 $options->{'t'} ||= '02:00:00';
+$options->{'proc'} ||= $options->{'n'}*$options->{'N'};
+$options->{'p'} ||= $options->{'proc'};
 
 my $SLURM = stefans_libs::SLURM->new($options);
 $SLURM->{'debug'} = 1 if ($debug);
@@ -155,8 +161,7 @@ open( SC, ">$fm->{'path'}/InitializeSLURMenv.sh" )
 foreach (
 	'icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 HISAT2/2.0.4',
 	'GCC/4.9.3-2.25 OpenMPI/1.10.2',
-	'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048',
-	'SAMtools/0.1.20 BEDTools/2.25.0',
+	'SAMtools/1.3.1 BEDTools/2.25.0',
   )
 {
 	print SC "module load $_\n";
