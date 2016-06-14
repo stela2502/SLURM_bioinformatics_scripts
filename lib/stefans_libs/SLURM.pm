@@ -129,16 +129,21 @@ sub run {
 	}
 	return 1;
 }
-=head3 check_4_outfile( $cmd, $outfile)
+=head3 check_4_outfile( $cmd, @outfiles)
 
-Adds a '#' before the command if the outfile exists.
+Adds a '#' before the command if any outfile exists.
 
 =cut
 
 sub check_4_outfile {
-	my ( $self, $cmd, $outfile ) =@_;
-	Carp::confess ( "I can not check the outfile for '$cmd' - udefined!\n") unless ( defined $outfile);
-	$cmd = "#$cmd" if ( -f $outfile );
+	my ( $self, $cmd, @outfiles ) =@_;
+	Carp::confess ( "I can not check the outfile for '$cmd' - udefined!\n") unless ( defined $outfiles[0]);
+	foreach my $outfile ( @outfiles){
+		if ( -f $outfile ){
+			$cmd = "#$cmd";
+			last;
+		}
+	}
 	return $cmd;
 }
 

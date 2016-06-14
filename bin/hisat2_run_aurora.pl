@@ -19,7 +19,7 @@
 
 =head1  SYNOPSIS
 
-    hisat_run_aurora.pl
+    hisat2_run_aurora.pl
        -files     :the input fastq or sra files
        -sra       :the files are in sra format, not fastq
        -options   :format: key_1 value_1 key_2 value_2 ... key_n value_n
@@ -40,9 +40,9 @@
    
 =head1 DESCRIPTION
 
-  wrapper script to run hisat on NGS expression data fastq and sra files.
+  wrapper script to run hisat2 on NGS expression data fastq and sra files.
 
-  To get further help use 'hisat_run_aurora.pl -help' at the comman line.
+  To get further help use 'hisat2_run_aurora.pl -help' at the comman line.
 
 =cut
 
@@ -130,7 +130,7 @@ $options->{'p'} ||= $options->{'proc'};
  
 my ( $task_description);
 
-$task_description .= 'perl '.$plugin_path .'/hisat_run_aurora.pl';
+$task_description .= 'perl '.$plugin_path .'/hisat2_run_aurora.pl';
 $task_description .= ' -files "'.join( '" "', @files ).'"' if ( defined $files[0]);
 $task_description .= ' -options "'.join( '" "', @options ).'"' if ( defined $options[0]);
 $task_description .= " -genome '$genome'" if (defined $genome);
@@ -213,7 +213,7 @@ sub create_call {
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
 "hisat2 -x $genome -U $fm->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
-    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam";
+    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam", "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
 sub create_sra_call {
@@ -224,7 +224,7 @@ sub create_sra_call {
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
 "hisat2 -x $genome --sra-acc $fm->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
-    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam";
+    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam", "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
 sub create_paired_call {
@@ -240,7 +240,7 @@ sub create_paired_call {
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
 "hisat2 -x $genome -1 $fm->{'total'} -2 $fm2->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
-    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam";
+    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam", "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
 sub chk_cmd {
