@@ -118,7 +118,16 @@ sub helpString {
 	pod2usage(q(-verbose) => 1);
 }
 
+### initialize default options:
 
+$options->{'n'} ||= 10;
+$options->{'N'} ||= 1;
+$options->{'t'} ||= '02:00:00';
+$options->{'proc'} ||= $options->{'n'}*$options->{'N'};
+$options->{'p'} ||= $options->{'proc'};
+
+###
+ 
 my ( $task_description);
 
 $task_description .= 'perl '.$plugin_path .'/hisat_run_aurora.pl';
@@ -129,6 +138,7 @@ $task_description .= " -coverage '$coverage'" if (defined $coverage);
 $task_description .= " -paired" if ($paired);
 $task_description .= " -bigwigTracks '$bigwigTracks'" if (defined $bigwigTracks);
 $task_description .= " -sra" if ($sra);
+$task_description .= " -debug" if ($debug);
 
 
 for ( my $i = 0 ; $i < @options ; $i += 2 ) {
@@ -139,12 +149,6 @@ for ( my $i = 0 ; $i < @options ; $i += 2 ) {
 ## Do whatever you want!
 
 my ( $cmd, $fm, @big_wig_urls, $tmp, $this_outfile );
-
-$options->{'n'} ||= 10;
-$options->{'N'} ||= 1;
-$options->{'t'} ||= '02:00:00';
-$options->{'proc'} ||= $options->{'n'}*$options->{'N'};
-$options->{'p'} ||= $options->{'proc'};
 
 my $SLURM = stefans_libs::SLURM->new($options);
 $SLURM->{'debug'} = 1 if ($debug);

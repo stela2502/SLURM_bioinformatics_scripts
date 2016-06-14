@@ -10,8 +10,8 @@ my ( $value, $exp, $cmd );
 my $exec = $plugin_path . "/../bin/hisat2_run_aurora.pl";
 ok( -f $exec, "the script has been found" );
 
-if ( -d "$plugin_path/data/hisat/" ) {
-	system( 'rm -Rf ' . "$plugin_path/data/hisat/" );
+if ( -d "$plugin_path/data/HISAT2_OUT/" ) {
+	system( 'rm -Rf ' . "$plugin_path/data/HISAT2_OUT/" );
 }
 if ( -f "$plugin_path/data/test_empty.fastq.sh" ) {
 	unlink( -f "$plugin_path/data/test_empty.fastq.sh" );
@@ -54,7 +54,7 @@ $exp = [
 	'#SBATCH -o test_empty.fastq%j.out',
 	'#SBATCH -e test_empty.fastq%j.err',
 "hisat2 -x $plugin_path/data/hg38/hg38 -U $plugin_path/data/test_empty.fastq.gz --threads 2 > $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam",
-"samtools view -Sb  $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam | samtools sort -@ 1 - $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted",
+"samtools view -Sb  $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam | samtools sort -@ 1 -o $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam -",
 "if  [ -f $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam ]&&[ -s $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam ]; then",
 "rm -f $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam",
 	'fi',
@@ -65,3 +65,39 @@ $exp = [
 
 is_deeply( $value, $exp, "The script file contains the right entries" );
 
+$exp = $value; ## I want to check the comments
+
+system ( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam");
+
+&run_cmd_and_read_script();
+@$exp[7] = "#@$exp[7]";
+
+is_deeply( $value, $exp, "The sam creation was blocked" );
+
+unlink( "$plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam" );
+system ( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam");
+
+&run_cmd_and_read_script(); ## all sam and sorted.bam creation should be blocked
+@$exp[8] = "#@$exp[8]";
+@$exp[9] = "#@$exp[9]";
+@$exp[10] = "#@$exp[10]";
+@$exp[11] = "#@$exp[11]";
+
+is_deeply( $value, $exp, "All sam and sorted.bam creation was blocked" );
+
+system( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph");
+&run_cmd_and_read_script(); ## all sam and sorted.bam creation should be blocked
+@$exp[12] = "#@$exp[12]";
+
+is_deeply( $value, $exp, "All sam, sorted.bam and bedGraph creation was blocked" );
+
+system( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bw");
+
+sub run_cmd_and_read_script {
+	system($cmd );
+
+	open( IN, "<$plugin_path/data/test_empty.fastq.sh" )
+  	or die "I could not read the created script file\n$!\n";
+	$value = [ map { chomp; $_ } <IN> ];
+	close(IN);
+}

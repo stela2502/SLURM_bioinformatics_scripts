@@ -130,11 +130,13 @@ sub convert_bedGraph_2_bigwig {
 	unless ( ref($fm) eq "HASH") {
  		$fm = root->filemap( $fm );
  	}
- 	my $w = "bedGraphToBigWig is not working on aurora !?\nIf it is working remove this warning!";
- 	warn $w."\n";
- 	return "#$w";
-	my $infile = $fm->{'total'};
 	my $outfile = $fm->{'path'} . "/". $fm->{'filename_core'}.'.bw';
+	#### remove this part when bedGraphToBigWig is working on aurora #########
+	my $w = "bedGraphToBigWig is not working on aurora !?\n#If it is working remove this warning!";
+ 	warn $w."\n";
+ 	return "#$w", $outfile;
+ 	##########################################################################
+	my $infile = $fm->{'total'};
 	my $cmd ="bedGraphToBigWig $infile $coverage $outfile";
 	push( @{$self->{'big_wig_urls'}},
 "track type=bigWig name=\"$fm->{'filename_core'}\" description=\"$fm->{'filename_core'}\""
