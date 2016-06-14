@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 7;
+use Test::More tests => 9;
 
 use FindBin;
 my $plugin_path = $FindBin::Bin;
@@ -22,7 +22,9 @@ $cmd =
   . "-options n 1 N 1 t '00:02:00' p 2 proc 2 "
   . "-genome $plugin_path/data/hg38/hg38 "    ## does not even exist
   . "-coverage  $plugin_path/data/fake_hg38.chrom.sizes.txt "
-  . "-bigwigTracks $plugin_path/data/output/hisat_BigWigTrackInfo.txt  -debug > /dev/null";
+  . "-bigwigTracks $plugin_path/data/output/hisat_BigWigTrackInfo.txt  -debug"
+  . " > /dev/null"
+  ;
 print "the command:\n$cmd\n";
 
 system($cmd );
@@ -92,6 +94,23 @@ system( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph");
 is_deeply( $value, $exp, "All sam, sorted.bam and bedGraph creation was blocked" );
 
 system( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bw");
+
+&run_cmd_and_read_script();
+@$exp[13] = "#@$exp[13]";
+if ( defined @$exp[14] ) {
+	@$exp[14] = "#@$exp[14]";
+}
+is_deeply( $value, $exp, "All sam, sorted.bam, bedGraph and bw creation was blocked" );
+
+## and now a final check that the script is not run:
+
+$cmd =~ s/\-debug//;
+&run_cmd_and_read_script(); ## all sam and sorted.bam creation should be blocked
+is_deeply( $value, $exp, "All sam, sorted.bam and bedGraph creation was blocked and you have not seen an SBATCH error message - right?" );
+
+#unlink ( "$plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph");
+#&run_cmd_and_read_script(); ## all sam and sorted.bam creation should be blocked
+
 
 sub run_cmd_and_read_script {
 	system($cmd );

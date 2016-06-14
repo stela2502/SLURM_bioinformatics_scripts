@@ -116,16 +116,17 @@ sub run {
 	open ( OUT ,">$fm->{path}/$fm->{'filename_core'}.sh" ) or Carp::confess ( "I can not create the script file '$fm->{path}/$fm->{'filename_core'}.sh'\n$!\n");
 	print OUT $s;
 	close ( OUT );
-	print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
 	my @ALL = split("\n", $cmd);
 	my @OK = grep( ! /^#/, @ALL );
 	@OK = grep ( ! /^\s*$/, @OK );
-	unless ( $self->{'debug'}) {
-		if ( @OK > 0 ) {
-			system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" )
-		}else {
-			print "Useless to run script - no commands in the file\n";
-		}
+	if ( @OK > 0 and !$self->{'debug'} ) {	
+		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
+		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" )
+	}elsif ( $self->{'debug'} ) {
+		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh # not run (DEBUG)\n";
+	}
+	else{
+		print "All outfiles present for $fm->{path}/$fm->{'filename_core'}.sh - not run\n";
 	}
 	return 1;
 }
