@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 4;
+use Test::More tests => 7;
 
 use FindBin;
 my $plugin_path = $FindBin::Bin;

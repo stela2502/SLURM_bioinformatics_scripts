@@ -244,10 +244,10 @@ sub create_paired_call {
 }
 
 sub chk_cmd {
-	my ( $cmd, $ofile ) = @_;
-	$this_outfile = $ofile;
+	my ( $cmd, @ofiles ) = @_;
+	$this_outfile = $ofiles[0];
 	return join( "\n",
-		map { $SLURM->check_4_outfile( $_, $ofile ) } split( /\n/, $cmd ) )
+		map { $SLURM->check_4_outfile( $_, @ofiles ) } split( /\n/, $cmd ) )
 	  . "\n";
 }
 
