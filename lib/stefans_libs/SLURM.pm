@@ -111,7 +111,7 @@ The script will be created in $fm->{path} and run using SBATCH if the debug valu
 =cut
 
 sub run {
-	my ( $self, $cmd, $fm ) = @_;
+	my ( $self, $cmd, $fm, @targets ) = @_;
 	my $s = $self->script($cmd, $fm->{'filename_core'} );
 	open ( OUT ,">$fm->{path}/$fm->{'filename_core'}.sh" ) or Carp::confess ( "I can not create the script file '$fm->{path}/$fm->{'filename_core'}.sh'\n$!\n");
 	print OUT $s;
