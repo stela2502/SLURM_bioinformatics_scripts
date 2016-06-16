@@ -80,13 +80,14 @@ Creates a script file string like that:
 #SBATCH -J '.$name'
 #SBATCH -o '.$name.'_omp_%j.out'
 #SBATCH -e '.$name.'_omp_%j.err'
-
+#SBATCH --mail-type=END,FAIL # notifications for job done & fail 
+#SBATCH --mail-user=myemail@harvard.edu # send-to address
 =cut
 
 sub script {
 	my ( $self, $cmd, $name ) = @_;
 	&check ( { cmd=>$cmd, name=> $name}, 'cmd', 'name' );
-	my @o = qw( n N t);
+	my @o = qw( n N t );
 	$self->check( @o );
 	my $ret = '#! /bin/bash'."\n";
 	foreach my $option ( @o ) {
@@ -96,6 +97,11 @@ sub script {
 			$ret .= "#SBATCH --$option $self->{$option}\n";
 		}
 		
+	}
+	if ( defined $self->{'mail-user'} ) {
+		$ret .= "#SBATCH --mail-user $self->{'mail-user'}\n";
+		$self->{'mail-type'} ||= 'END;FAIL';
+		$ret .= "#SBATCH --mail-type $self->{'mail-type'}\n";
 	}
 	$ret .= join("\n", "#SBATCH -J $name","#SBATCH -o $name"."%j.out","#SBATCH -e $name"."%j.err");
 	$ret .= "\n$cmd\n";
