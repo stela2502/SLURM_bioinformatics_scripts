@@ -51,12 +51,13 @@ my $plugin_path = "$FindBin::Bin";
 my $VERSION = 'v1.0';
 
 
-my ( $help, $debug, $database, $cmd, $options, @options, $outfile);
+my ( $help, $debug, $database, $cmd, $options, @options, $I_have_loaded_all_modules, $outfile);
 
 Getopt::Long::GetOptions(
 	 "-cmd=s"    => \$cmd,
        "-options=s{,}"    => \@options,
 	 "-outfile=s"    => \$outfile,
+	 "-I_have_loaded_all_modules" => \$I_have_loaded_all_modules,
 
 	 "-help"             => \$help,
 	 "-debug"            => \$debug
@@ -73,6 +74,9 @@ unless ( defined $options[0]) {
 }
 unless ( defined $outfile) {
 	$error .= "the cmd line switch -outfile is undefined!\n";
+}
+unless ( $I_have_loaded_all_modules ){
+	$error .= "Please make sure you have loaded all required modules and try again! (-I_have_loaded_all_modules missing)\n"
 }
 
 
