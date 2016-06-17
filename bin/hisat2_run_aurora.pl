@@ -26,7 +26,7 @@
        		n    :number of cores per node (default = 10 )
             N    :number of nodes (default =1)
             t    :time untill the script is stopped (default =02:00:0 (2h))
-            proc :hisat 2 number of threads (default = n*N )      
+            proc :hisat 2 number of threads (default = n*N ) 
                    
        -genome       :the hisat2 genome information path
        -coverage     :the chromome length file
@@ -118,6 +118,11 @@ sub helpString {
 	pod2usage(q(-verbose) => 1);
 }
 
+
+for ( my $i = 0 ; $i < @options ; $i += 2 ) {
+	$options[ $i + 1 ] =~ s/\n/ /g;
+	$options->{ $options[$i] } = $options[ $i + 1 ];
+}
 ### initialize default options:
 
 $options->{'n'} ||= 10;
@@ -141,11 +146,6 @@ $task_description .= " -sra" if ($sra);
 $task_description .= " -debug" if ($debug);
 
 
-for ( my $i = 0 ; $i < @options ; $i += 2 ) {
-	$options[ $i + 1 ] =~ s/\n/ /g;
-	$options->{ $options[$i] } = $options[ $i + 1 ];
-}
-
 ## Do whatever you want!
 
 my ( $cmd, $fm, @big_wig_urls, $tmp, $this_outfile );
@@ -153,7 +153,7 @@ my ( $cmd, $fm, @big_wig_urls, $tmp, $this_outfile );
 my $SLURM = stefans_libs::SLURM->new($options);
 $SLURM->{'debug'} = 1 if ($debug);
 
-## kick all SLURM options that should not be used for the hisat
+## kick all SLURM options that should not be used for the hisat run
 foreach (qw(n N t mem)) {
 	delete( $options->{$_} );
 }
