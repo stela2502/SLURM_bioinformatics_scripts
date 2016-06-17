@@ -34,7 +34,7 @@ use stefans_libs::flexible_data_structures::data_table;
        -broad     :whether to call broad peaks or not
        -bigWig    :produce bigwig files?
        -normdup   :NOT drop pcr duplicates?
-
+       -noControl :Do not use a control file for the peak calling
 
        -help   :print this help
        -debug  :verbose output
@@ -57,7 +57,7 @@ my $plugin_path = "$FindBin::Bin";
 my $VERSION = 'v1.0';
 
 
-my ( $help, $debug, $database, @files, @cfiles,$options, @options, $broad, $bigWig, $normdup);
+my ( $help, $debug, $database, @files, @cfiles,$options, @options, $broad, $bigWig, $normdup, $noControl);
 
 Getopt::Long::GetOptions(
      "-files=s{,}"    => \@files,
@@ -66,6 +66,7 @@ Getopt::Long::GetOptions(
 	 "-broad"    => \$broad,
 	 "-bigWig"   => \$bigWig,
 	 "-normdup"    => \$normdup,
+	 "-noControl" => \$noControl,
 
 	 "-help"             => \$help,
 	 "-debug"            => \$debug
@@ -78,6 +79,7 @@ unless ( -f $files[0]) {
 	$error .= "the cmd line switch -files is undefined!\n";
 }
 unless ( -f $cfiles[0]) {
+	unless ( $noControl ){
 	my $d = data_table->new ( {'filename' => $files[0] } );
 	if ( defined $d->Header_Position( 'files') ) {
 		@files = @{$d->GetAsArray('files')};
@@ -92,6 +94,7 @@ unless ( -f $cfiles[0]) {
 		}
 	}else {
 		$error .= "the cmd line switch -cfiles is undefined!\n";
+	}
 	}
 }
 unless ( defined $options[0]) {
@@ -126,6 +129,7 @@ $task_description .= ' -options "'.join( '" "', @options ).'"' if ( defined $opt
 $task_description .= " -broad" if ($broad);
 $task_description .= " -bigWig" if ($bigWig);
 $task_description .= " -normdup" if ($normdup);
+$task_description .= " -noControl" if ($noControl);
 
 for ( my $i = 0 ; $i < @options ; $i += 2 ) {
 	$options[ $i + 1 ] =~ s/\n/ /g;
@@ -183,7 +187,13 @@ for ( my $i = 0; $i <@files; $i ++ ) {
 	$fm->{'path'}.="/MACS2_out";
 	mkdir ( $fm->{'path'} ) unless ( -d $fm->{'path'} );
 	$outfile = "$fm->{'path'}/$fm->{'filename_core'}";
-	$cmd .= $SLURM->check_4_outfile( "macs2 callpeak -t $fm->{'total'} -c $cfm->{'total'} ", $outfile."_peaks.bed");
+	if ( $noControl ) {
+		$cmd .= $SLURM->check_4_outfile( "macs2 callpeak -t $fm->{'total'} ", $outfile."_peaks.bed");
+	}
+	else {
+		$cmd .= $SLURM->check_4_outfile( "macs2 callpeak -t $fm->{'total'} -c $cfm->{'total'} ", $outfile."_peaks.bed");
+	}
+	
 	foreach my $key ( keys %$options ) {
 		$cmd .= " -$key $options->{$key}";
 	}
@@ -193,7 +203,7 @@ for ( my $i = 0; $i <@files; $i ++ ) {
 	if ( $broad ){
 		$cmd .= " --broad";
 	}
-	$cmd .= " -n $outfile\n";
+	$cmd .= " --call-summits -n $outfile\n";
 	$SLURM -> run ( $cmd, $fm );
 }
 

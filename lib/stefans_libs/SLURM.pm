@@ -62,6 +62,18 @@ sub new{
 	}
 	$self->{'debug'} ||= 0;
 	
+	if ( defined $self->{'mail-user'} ) {
+		$self->{'mail-type'} ||= 'END';
+		my $OK = { map { $_ => 1 } 'BEGIN', 'END', 'FAIL', 'REQUEUE', 'ALL' };
+		unless ( $OK->{$self->{'mail-type'}} ){
+			warn "option 'mail-type' $self->{'mail-type'} is not supported - set to END\n";
+			$self->{'mail-type'} = 'END';
+		}
+	}
+	
+
+#BEGIN, END, FAIL, REQUEUE, and ALL (any state change).
+
 
   	bless $self, $class  if ( $class eq "stefans_libs::SLURM" );
 
@@ -80,6 +92,8 @@ Creates a script file string like that:
 #SBATCH -J '.$name'
 #SBATCH -o '.$name.'_omp_%j.out'
 #SBATCH -e '.$name.'_omp_%j.err'
+#SBATCH --mail-user=fred@institute.se
+#SBATCH --mail-type=END
 
 =cut
 

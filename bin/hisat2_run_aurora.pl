@@ -212,7 +212,7 @@ sub create_call {
     $fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
-"hisat2 -x $genome -U $fm->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
+"hisat2 -x $genome -U $fm->{'total'} --threads $options->{proc} --add-chrname > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
     return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam", "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
@@ -223,7 +223,7 @@ sub create_sra_call {
     $fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
-"hisat2 -x $genome --sra-acc $fm->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
+"hisat2 -x $genome --sra-acc $fm->{'total'} --threads $options->{proc} --add-chrname > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
     return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam", "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
@@ -239,7 +239,7 @@ sub create_paired_call {
     mkdir ( "$fm->{'path'}/HISAT2_OUT/" ) unless ( -d "$fm->{'path'}/HISAT2_OUT/");
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
-"hisat2 -x $genome -1 $fm->{'total'} -2 $fm2->{'total'} --threads $options->{proc} > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
+"hisat2 -x $genome -1 $fm->{'total'} -2 $fm2->{'total'} --threads $options->{proc} --add-chrname > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
     return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam", "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
