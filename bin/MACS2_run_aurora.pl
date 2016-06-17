@@ -190,10 +190,10 @@ for ( my $i = 0; $i <@files; $i ++ ) {
 	mkdir ( $fm->{'path'} ) unless ( -d $fm->{'path'} );
 	$outfile = "$fm->{'path'}/$fm->{'filename_core'}";
 	if ( $noControl ) {
-		$cmd .= $SLURM->check_4_outfile( "macs2 callpeak -t $fm->{'total'} ", $outfile."_peaks.bed");
+		$cmd .= $SLURM->check_4_outfile( "macs2 callpeak -t $fm->{'total'} ", $outfile."_peaks.xls");
 	}
 	else {
-		$cmd .= $SLURM->check_4_outfile( "macs2 callpeak -t $fm->{'total'} -c $cfm->{'total'} ", $outfile."_peaks.bed");
+		$cmd .= $SLURM->check_4_outfile( "macs2 callpeak -t $fm->{'total'} -c $cfm->{'total'} ", $outfile."_peaks.xls");
 	}
 	
 	foreach my $key ( keys %$options ) {
