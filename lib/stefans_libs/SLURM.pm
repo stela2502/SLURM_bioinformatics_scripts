@@ -136,11 +136,11 @@ sub run {
 	if ( @OK > 0 and !$self->{'debug'} ) {	
 		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
 		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" )
-	}elsif ( $self->{'debug'} ) {
-		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh # not run (DEBUG)\n";
+	}elsif ( @OK == 0) {
+		print "All outfiles present for $fm->{path}/$fm->{'filename_core'}.sh - not run\n";
 	}
 	else{
-		print "All outfiles present for $fm->{path}/$fm->{'filename_core'}.sh - not run\n";
+		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh # not run (DEBUG)\n";
 	}
 	return 1;
 }
