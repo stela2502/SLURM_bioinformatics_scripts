@@ -172,16 +172,18 @@ unless ($debug) {
 	system("bash $fm->{'path'}/InitializeSLURMenvMACS2.sh");
 }
 
-
+$tmp2 = '';
 
 for ( my $i = 0; $i <@files; $i ++ ) {
 	$file = $files[$i];
 	Carp::confess ( "bam file '$file' does not exist\n$!\n") unless ( -f $file);
-	$cfile= $cfiles[$i];
-	Carp::confess ( "control bam file '$file' does not exist\n$!\n") unless ( -f $cfile);
 	( $tmp, $fm ) = &rmdup( root->filemap( $file ) );
-	#print "The file rmdup command: $tmp\n";
-	( $tmp2, $cfm ) = &rmdup( root->filemap( $cfile ) );
+	unless ( $noControl ) {
+		$cfile= $cfiles[$i];
+		Carp::confess ( "control bam file '$file' does not exist\n$!\n") unless ( -f $cfile);
+		( $tmp2, $cfm ) = &rmdup( root->filemap( $cfile ) );
+	}
+	
 	$cmd = "$tmp$tmp2";
 	#print "The cfile rmdup command: $tmp2\n";
 	$fm->{'path'}.="/MACS2_out";
