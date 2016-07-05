@@ -131,13 +131,13 @@ sub convert_bedGraph_2_bigwig {
  		$fm = root->filemap( $fm );
  	}
 	my $outfile = $fm->{'path'} . "/". $fm->{'filename_core'}.'.bw';
-	#### remove this part when bedGraphToBigWig is working on aurora #########
-	my $w = "bedGraphToBigWig is not working on aurora !?\n#If it is working remove this warning!";
- 	warn $w."\n";
- 	return "#$w", $outfile;
- 	##########################################################################
+#	#### remove this part when bedGraphToBigWig is working on aurora #########
+#	my $w = "bedGraphToBigWig is not working on aurora !?\n#If it is working remove this warning!";
+# 	warn $w."\n";
+# 	return "#$w", $outfile;
+# 	##########################################################################
 	my $infile = $fm->{'total'};
-	my $cmd ="bedGraphToBigWig $infile $coverage $outfile";
+	my $cmd ="polish_bed_like_files.pl -bed_file $infile\nbedGraphToBigWig $infile $coverage $outfile";
 	push( @{$self->{'big_wig_urls'}},
 "track type=bigWig name=\"$fm->{'filename_core'}\" description=\"$fm->{'filename_core'}\""
 		  . " bigDataUrl=http://bone.bmc.lu.se/Public/$fm->{'filename_core'}.bw"

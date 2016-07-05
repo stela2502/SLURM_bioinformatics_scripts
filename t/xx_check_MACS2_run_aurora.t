@@ -40,8 +40,10 @@ $exp = [
 	'#SBATCH -e test_empty.rmdup%j.err',
 "samtools rmdup $plugin_path/data/test_empty.bam $plugin_path/data/test_empty.rmdup.bam",
 "samtools rmdup $plugin_path/data/test_empty.bam $plugin_path/data/test_empty.rmdup.bam",
-"MACS2 -t $plugin_path/data/test_empty.rmdup.bam -c $plugin_path/data/test_empty.rmdup.bam "
-	." -g hs -f BAM -q 0.01 -n $plugin_path/data/MACS2_out/test_empty.rmdup",
+'macs2 callpeak -t /home/med-sal/git_Projects/SLURM_bioinformatics_scripts/t/data/test_empty.rmdup.bam '
+.'-c /home/med-sal/git_Projects/SLURM_bioinformatics_scripts/t/data/test_empty.rmdup.bam '
+.' -f BAM -g hs -q 0.01 --call-summits -n /home/med-sal/git_Projects/SLURM_bioinformatics_scripts/t/data/MACS2_out/test_empty.rmdup',
+
 	''
   ]
 ;

@@ -55,12 +55,13 @@ $exp = [
 	'#SBATCH -J test_empty.fastq',
 	'#SBATCH -o test_empty.fastq%j.out',
 	'#SBATCH -e test_empty.fastq%j.err',
-"hisat2 -x $plugin_path/data/hg38/hg38 -U $plugin_path/data/test_empty.fastq.gz --threads 2 > $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam",
+"hisat2 -x $plugin_path/data/hg38/hg38 -U $plugin_path/data/test_empty.fastq.gz --threads 2 --add-chrname > $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam",
 "samtools view -Sb  $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam | samtools sort -@ 1 -o $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam -",
 "if  [ -f $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam ]&&[ -s $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam ]; then",
 "rm -f $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam",
 	'fi',
 "bedtools genomecov -bg -split -ibam $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam -g $plugin_path/data/fake_hg38.chrom.sizes.txt | sort -k1,1 -k2,2n > $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph",
+'polish_bed_like_files.pl -bed_file /home/med-sal/git_Projects/SLURM_bioinformatics_scripts/t/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph',
 "bedGraphToBigWig $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph $plugin_path/data/fake_hg38.chrom.sizes.txt $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bw",
 	''
   ];

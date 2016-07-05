@@ -15,7 +15,7 @@ if ( -d "$plugin_path/data/outpath/SLURM_run/" ) {
 }
 
 $cmd =
-" perl -I $plugin_path/../lib/ $exec -cmd 'Do nothing at all' -outfile '$plugin_path/data/outpath/SLURM_run/SLURM_result.txt' -debug";
+" perl -I $plugin_path/../lib/ $exec -cmd 'Do nothing at all' -outfile '$plugin_path/data/outpath/SLURM_run/SLURM_result.txt' -I_have_loaded_all_modules -debug";
 
 system($cmd );
 
@@ -46,7 +46,7 @@ $exp = [
 is_deeply( \@values, $exp, "right entries in the SLURM script" );
 
 $cmd .=
-" -options n 10 N 2 'mail-user' someone\@somewhere.com 'mail-type' 'END;FAIL'";
+" -options n 10 N 2 'mail-user' someone\@somewhere.com 'mail-type' 'END'";
 
 system($cmd );
 open( F, "<$plugin_path/data/outpath/SLURM_run/SLURM_result.sh" )
@@ -55,13 +55,25 @@ open( F, "<$plugin_path/data/outpath/SLURM_run/SLURM_result.sh" )
 close(F);
 
 #print " \$exp = " . root->print_perl_var_def( \@values ) . ";\n ";
+
+#$exp = [
+#	'#! /bin/bash',
+#	'#SBATCH -n 10',
+#	'#SBATCH -N 2',
+#	'#SBATCH -t 02:00:00',
+#	'#SBATCH -J SLURM_result',
+#	'#SBATCH -o SLURM_result%j.out',
+#	'#SBATCH -e SLURM_result%j.err',
+#	'Do nothing at all'
+#];
+
 $exp = [
 	'#! /bin/bash',
 	'#SBATCH -n 10',
 	'#SBATCH -N 2',
 	'#SBATCH -t 02:00:00',
 	'#SBATCH --mail-user someone@somewhere.com',
-	'#SBATCH --mail-type END;FAIL',
+	'#SBATCH --mail-type END',
 	'#SBATCH -J SLURM_result',
 	'#SBATCH -o SLURM_result%j.out',
 	'#SBATCH -e SLURM_result%j.err',

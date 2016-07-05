@@ -43,26 +43,27 @@ $exp = [
 	'#SBATCH -o test_empty.fastq%j.out',
 	'#SBATCH -e test_empty.fastq%j.err',
 "bowtie2 -x $plugin_path/data/hg38/hg38  -p 2 -U '$plugin_path/data/test_empty.fastq.gz' -S $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sam",
-"samtools view -Sb  $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sam | samtools sort -@ 1 - $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sorted",
+"samtools view -Sb  $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sam | samtools sort -@ 1 -o $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sorted.bam -",
 "if  [ -f $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sorted.bam ]&&[ -s $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sorted.bam ]; then",
 "rm -f $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sam",
 	'fi','',
 	"bedtools genomecov -bg -split -ibam $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sorted.bam -g $plugin_path/data/fake_hg38.chrom.sizes.txt | sort -k1,1 -k2,2n > $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.bedGraph",
+	"polish_bed_like_files.pl -bed_file /home/med-sal/git_Projects/SLURM_bioinformatics_scripts/t/data/bowtie2/test_empty.fastq_bowtie2.bedGraph",
 	"bedGraphToBigWig $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.bedGraph $plugin_path/data/fake_hg38.chrom.sizes.txt $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.bw",
 	''
 ];
+
+is_deeply( $value, $exp, "The script contains the right entries" );
+
 
 open ( IN, "<$plugin_path/data/output/BigWigTrackInfo.txt" ) or die "I could not read the created BigWigTrackInfo file\n$!\n";
 $value = [ map { chomp; $_ } <IN> ];
 close(IN);
 
-#print " \$exp = " . root->print_perl_var_def($value) . "\n ";
-$exp = ['track type=bigWig name="test_empty.fastq_bowtie2" description="test_empty.fastq_bowtie2" bigDataUrl=http://bone.bmc.lu.se/Public/test_empty.fastq_bowtie2.bw' ];
-is_deeply( $value, $exp, "The bigwig outfile contains the right entries" );
+#die " \$exp = " . root->print_perl_var_def($value) . "\n ";
 
-#print " \$exp = " . root->print_perl_var_def($value) . "\n ";
-
-is_deeply( $value, $exp, "The script contains the right entries" );
+my $exp2 = ['track type=bigWig name="test_empty.fastq_bowtie2" description="test_empty.fastq_bowtie2" bigDataUrl=http://bone.bmc.lu.se/Public/test_empty.fastq_bowtie2.bw' ];
+is_deeply( $value, $exp2, "The bigwig outfile contains the right entries" );
 
 #### now lets check the script if a outfile is already present 
 
@@ -109,7 +110,7 @@ system($cmd );
 open( IN, "<$plugin_path/data/test_empty.fastq.sh" );
 $value = [ map { chomp; $_ } <IN> ];
 close(IN);
-foreach ( 14 ) {
+foreach ( 14, 15 ) {
 	@$exp[$_] = "#@$exp[$_]";
 }
 is_deeply( $value, $exp, "The script contains the right entries ( .bw existing)" );
