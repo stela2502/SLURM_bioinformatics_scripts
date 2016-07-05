@@ -20,10 +20,12 @@
 =head1  SYNOPSIS
 
     runCommand.pl
-       -cmd       :<please add some info!>
-       -options     :<please add some info!> you can specify more entries to that
-                         format: key_1 value_1 key_2 value_2 ... key_n value_n
-       -outfile       :<please add some info!>
+       -cmd     :The command you want to run
+       -options :format: key_1 value_1 key_2 value_2 ... key_n value_n
+       		n  :amount of cores per node
+       		N  :amount of nodes
+       		
+       -outfile :the outfile that will be created during the run (to check whether it should be run or not.)
 
 
        -help           :print this help

@@ -11,7 +11,8 @@ WriteMakefile(
 	VERSION_FROM => "lib/SLURM_bioinformatic_scripts.pm",
 	EXE_FILES    => [ map {"bin/$_" } grep !/^\./,  grep '*.pl', readdir(DIR) ],
 	PREREQ_PM    => {
-		'Stefans_Lib_Essentials'  => 0
+		'Stefans_Lib_Essentials'  => 0,
+		'File::Copy' => 0,
 	  }
 
 );
