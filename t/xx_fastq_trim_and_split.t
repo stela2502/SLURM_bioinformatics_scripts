@@ -65,16 +65,16 @@ close(TEST);
 #print "\$exp = ".root->print_perl_var_def($exp ).";\n";
 
 if ( !$rev_compl ) {
-$exp = {
-  'TTAA' => '8',
-  'AACC' => '60',
-  'ACAA' => '0',
-  'GCCA' => '8',
-  'GACC' => '48',
-  'TCCG' => '1096',
-  'TGCC' => '12',
-  'TATT' => '0'
-};
+	$exp = {
+		'TTAA' => '8',
+		'AACC' => '60',
+		'ACAA' => '0',
+		'GCCA' => '8',
+		'GACC' => '48',
+		'TCCG' => '1096',
+		'TGCC' => '12',
+		'TATT' => '0'
+	};
 }
 else {
 	$exp = {
@@ -109,6 +109,7 @@ print "I got "
   . ( $summary / 4 )
   . " out of 10.000 reads mapped to a sample "
   . sprintf( "%d.3", ( $summary * 100 / 40000 ) ) . "%\n";
+
 #print "\$exp = " . root->print_perl_var_def($value) . ";\n";
 
 sub rev_compl {
@@ -125,7 +126,16 @@ open( IN,
 $value = [<IN>];
 $value = [ map { chomp(); $_ } @$value ];
 close(IN);
-$exp = [ '@NS500281:228:HFKVCBGXY:1:11101:15532:1678:TCTGA:TTAA 1:N:0:0', 'GTCTCATTTTGCATCTCGGCAGTCTCTTTCTGATTGTCCAGTTGC', '+', 'AEEEE/EEEEEE/E/EEEE/E/EAEEEEEEEE6EEEAEEEEAEE/', '@NS500281:228:HFKVCBGXY:1:11101:5862:1869:AACCC:TTAA 1:N:0:0', 'GCTACTAAATGCCGCGGATTGGTTTCGCTGAATCAGGTTATTAAA', '+', '<EEEEE///EEA//E/6E/EAE/E<EEEEE/EEE/EEEEEEAA//' ];
+$exp = [
+	'@NS500281:228:HFKVCBGXY:1:11101:15532:1678:TCTGA:TTAA 1:N:0:0',
+	'GTCTCATTTTGCATCTCGGCAGTCTCTTTCTGATTGTCCAGTTGC',
+	'+',
+	'AEEEE/EEEEEE/E/EEEE/E/EAEEEEEEEE6EEEAEEEEAEE/',
+	'@NS500281:228:HFKVCBGXY:1:11101:5862:1869:AACCC:TTAA 1:N:0:0',
+	'GCTACTAAATGCCGCGGATTGGTTTCGCTGAATCAGGTTATTAAA',
+	'+',
+	'<EEEEE///EEA//E/6E/EAE/E<EEEEE/EEE/EEEEEEAA//'
+];
 
 is_deeply( $value, $exp, "right TTAA fastq file" );
 
