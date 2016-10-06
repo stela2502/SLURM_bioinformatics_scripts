@@ -1,2 +1,4 @@
 output
 /MACS2_out/
+/InitializeSLURMenv.sh
+/InitializeSLURMenvMACS2.sh
