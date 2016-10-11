@@ -103,6 +103,9 @@ $task_description .= " -project_id '$project_id'" if (defined $project_id);
 $task_description .= " -opath '$opath'" if (defined $opath);
 
 
+unless ( -d $opath ){
+	system( "mkdir -p $opath" );
+}
 
 open ( OUT , ">$opath/download.R" ) or die "I could not create the R script '$opath/download.R'\n$!\n";
 print OUT "library(BaseSpaceR)
