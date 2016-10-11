@@ -2,3 +2,8 @@ output
 /MACS2_out/
 /InitializeSLURMenv.sh
 /InitializeSLURMenvMACS2.sh
+/InitializeSLURMenv.sh.orig
+/InitializeSLURMenv_BACKUP_8020.sh
+/InitializeSLURMenv_BASE_8020.sh
+/InitializeSLURMenv_LOCAL_8020.sh
+/InitializeSLURMenv_REMOTE_8020.sh

@@ -4,4 +4,9 @@
 /MYMETA.json
 /MYMETA.yml
 /pm_to_blib
+<<<<<<< HEAD
 /META.yml
+=======
+/.includepath
+/bcompare-4.1.9.21719_amd64.deb
+>>>>>>> fd379d6dd4741bae30149f461237808e9c83c19d
