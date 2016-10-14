@@ -11,6 +11,8 @@ my ( $value, @values, $exp );
 my $OBJ = stefans_libs::scripts::BAM -> new({'debug' => 1});
 is_deeply ( ref($OBJ) , 'stefans_libs::scripts::BAM', 'simple test of function stefans_libs::scripts::BAM -> new() ');
 
+
+
 #print "\$exp = ".root->print_perl_var_def($value ).";\n";
 
 

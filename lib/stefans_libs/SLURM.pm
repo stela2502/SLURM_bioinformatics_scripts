@@ -94,13 +94,14 @@ Creates a script file string like that:
 #SBATCH -e '.$name.'_omp_%j.err'
 #SBATCH --mail-user=fred@institute.se
 #SBATCH --mail-type=END
+#SBATCH -A snic2016-4-13
 
 =cut
 
 sub script {
 	my ( $self, $cmd, $name ) = @_;
 	&check ( { cmd=>$cmd, name=> $name}, 'cmd', 'name' );
-	my @o = qw( n N t);
+	my @o = qw( n N t A);
 	$self->check( @o );
 	my $ret = '#! /bin/bash'."\n";
 	foreach my $option ( @o ) {
