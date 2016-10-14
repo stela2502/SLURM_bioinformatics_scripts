@@ -137,6 +137,77 @@ sub exclude_read {
 	$self->filter_file($fastqfile, $function );
 	close ( $OUT );
 	print "$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
+	return $self;
 }
+
+=head2 extract_barcode ( $self, $file, $adapter, $sample_barcode, $startingPos, $outfile )
+
+THIS IS AN EXAMPLE IMPLEMENTATION using a fixed read setup:
+
+Read example
+NNN_Barcode_NN_cDNA_Adapter(Which may or may not be present)
+
+re-implement this function if your read example differs from the here used one. 
+
+=cut
+
+sub extract_barcode{
+	my ( $self, $file, $adapter, $sample_barcode, $startingPos, $outfile ) = @_;
+	my $OUT;
+	open ( $OUT, ">$outfile" ) or die "I could not create the outfile $outfile\n $!\n";
+	$startingPos ||= 1;
+	my $pattern = "(...)$sample_barcode(..)(.+)";
+
+	#warn $pattern."\n\n";
+	
+	sub overlap {
+    my ($str1, $str2) = @_;
+
+    # Equalize Lengths
+    if (length $str1 < length $str2) {
+        $str2 = substr $str2, 0, length($str1);
+    } elsif (length $str1 > length $str2) {
+        $str1 = substr $str1, length($str1) - length($str2);
+    }
+
+    # Reduce until match found
+    while ($str1 ne $str2) {
+        substr $str1, 0, 1, '';
+        chop $str2;
+    }
+
+   	 return $str1;
+	}
+	my $function = sub {
+		my $tmp = $self->fastq_line($_);
+		my $seq;
+		my $overlap;
+		if ( defined $tmp ) {
+			if ( @$tmp[1] =~ m/$pattern/ and  $-[1] < $startingPos ){
+				$self->{'OK'} ++;
+				my @tt = split(" ", @$tmp[0]);
+				@$tmp[0] =$tt[0].":$1$2 ".$tt[1];
+				$seq = $3;
+				$overlap = &overlap( $seq, $adapter );
+				if ( length($overlap) > 4 ) {
+					$seq =~ s/$overlap$// if ( length($overlap) > 0 );
+				}
+				@$tmp[1] =~ m/$seq/;
+				@$tmp[3] = substr( @$tmp[3], $-[0], $+[0]- $-[0] );
+				@$tmp[1] = $seq;
+				print $OUT join("\n", @$tmp)."\n";
+			}else {
+				$self->{'filtered'} ++;
+			}
+		}
+	};
+	$self->{'OK'} = $self->{'filtered'} = 0;
+	$self->filter_file($file, $function );
+	close ( $OUT );
+	print "$sample_barcode:$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
+	return $self;
+}
+
+
 
 1;

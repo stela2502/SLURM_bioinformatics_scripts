@@ -29,7 +29,7 @@
    
 =head1 DESCRIPTION
 
-  This script ensures that a given file contains only bona fide chromosomes ba adding a chr in front of a otherwise chr - less entry and removing all none chromosome entries
+  This script ensures that a given file contains only bona fide chromosomes by adding a chr in front of a otherwise chr - less entry and removing all none chromosome entries
 
   To get further help use 'polish_bed_like_files.pl -help' at the comman line.
 

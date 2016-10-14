@@ -54,3 +54,17 @@ $exp = [ '@M04223:22:000000000-AUY26:1:1101:16818:1622 1:N:0:1
 ' ];
 is_deeply ( [@values], $exp, "the right sequnce has been read\n" );
 
+
+## and now test the extract_barcode function
+
+#TGTGGCACGATGTGACGAGGCGGCCGAGTGGTTAAGGCGATGGACTGCTAA
+
+my $adapter =  'AGATCGGAAGAGCGGTTCAG';
+my $sample_barcode = 'GGCA';
+
+
+$OBJ -> extract_barcode ( $plugin_path."/data/repeat.fastq.gz",  $adapter, $sample_barcode, $plugin_path."/data/outpath/Barcodes_GGCA.fastq"  );
+$value = $OBJ -> open_file ( $plugin_path."/data/outpath/Barcodes_GGCA.fastq" );
+@values = <$value>;
+close ( $value );
+print "\$exp = ".root->print_perl_var_def([@values]).";\n";
