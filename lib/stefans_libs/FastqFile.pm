@@ -182,16 +182,19 @@ sub extract_barcode{
 		my $tmp = $self->fastq_line($_);
 		my $seq;
 		my $overlap;
+		my $add;
 		if ( defined $tmp ) {
 			if ( @$tmp[1] =~ m/$pattern/ and  $-[1] < $startingPos ){
 				$self->{'OK'} ++;
-				my @tt = split(" ", @$tmp[0]);
-				@$tmp[0] =$tt[0].":$1$2 ".$tt[1];
+				$add = ":$1$2";
 				$seq = $3;
 				$overlap = &overlap( $seq, $adapter );
 				if ( length($overlap) > 4 ) {
-					$seq =~ s/$overlap$// if ( length($overlap) > 0 );
+					$seq =~ s/$overlap$//;
+					$add = ":AD".length($overlap).$add;
 				}
+				my @tt = split(" ", @$tmp[0]);
+				@$tmp[0] =$tt[0]."$add ".$tt[1];
 				@$tmp[1] =~ m/$seq/;
 				@$tmp[3] = substr( @$tmp[3], $-[0], $+[0]- $-[0] );
 				@$tmp[1] = $seq;
@@ -208,6 +211,27 @@ sub extract_barcode{
 	return $self;
 }
 
-
+sub select_4_str {
+	my ( $self, $file, $str, $where, $outfile) =@_;
+	$where ||=  0;
+	my $OUT;
+	open ( $OUT, ">$outfile" ) or die "I could not create the outfile $outfile\n $!\n";
+	my $function = sub {
+		my $tmp = $self->fastq_line($_);
+		if ( defined $tmp ) {
+			if ( @$tmp[$where] =~ m/$str/ ){
+				$self->{'OK'} ++;
+				print $OUT join("\n", @$tmp)."\n";
+			}else {
+				$self->{'filtered'} ++;
+			}
+		}
+	};
+	$self->{'OK'} = $self->{'filtered'} = 0;
+	$self->filter_file($file, $function );
+	close ( $OUT );
+	print "$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
+	return $self;
+}
 
 1;

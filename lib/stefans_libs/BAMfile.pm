@@ -134,5 +134,111 @@ sub dropUMI_from_bam {
 	
 }
 
+sub filter_file {
+	my ( $self, $fname, $filter ) = @_;
+	my $file = $self->open_file($fname);
+	while ( <$file> ) {
+		chomp($_);
+		&{$filter}( $self, $_ );
+	}
+	close ( $file);
+	return $self;
+}
+
+sub select_4_str {
+	my ( $self, $file, $str, $where, $outfile) =@_;
+	$where ||=  0;
+	my $OUT;
+	open ( $OUT, "| samtools view -Sb - > $outfile") or die "I could not create the outfile $outfile\n $!\n";
+	#open ( $OUT,">$outfile" );
+	my $function = sub {
+		my @tmp;
+		if ( $_ =~ m/^\@/ ){ ## process header
+			print $OUT $_."\n";
+		}else {
+			@tmp=split( "\t", $_);
+			if ( $tmp[$where] =~ m/$str/ ){
+				$self->{'OK'} ++;
+				print $OUT join("\t", @tmp)."\n";
+			}else {
+				$self->{'filtered'} ++;
+			}
+		}
+	};
+	$self->{'OK'} = $self->{'filtered'} = 0;
+	$self->filter_file($file, $function );
+	close ( $OUT );
+	print "$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
+	return $self;
+}
+
+=head2 search_flag_binary( $file, [0,0,1,0,1], $outfile)
+
+Searches if the 1 bits are set in the flag.
+If any bit is not set, the hit will be rejected.
+0 bits will not be checked.
+
+=cut
+
+sub search_flag_binary {
+	my ( $self, $file, $bits, $outfile) =@_;
+	$bits ||=  [0,0,0,1]; ## reverse complement 
+	my $OUT;
+	open ( $OUT, "| samtools view -Sb - > $outfile")  or die "I could not create the outfile $outfile\n $!\n";
+	my $function = sub {
+		my @tmp;
+		if ( $_ =~ m/^\@/ ){ ## process header
+			print $OUT $_."\n";
+		}else {
+			@tmp=split( "\t", $_);
+			my @b = split(//, sprintf ( "%b", $tmp[1] ));
+			my $ok = 1;
+			foreach (my $i = 0; $i < @$bits; $i++ ) {
+				if ( @$bits[$i] ) {
+					$ok = 0 unless ( $b[$i] );
+				}
+			}
+			if ( ! $ok ) { 
+				$self->{'filtered'} ++;
+			}
+			else {
+				$self->{'OK'} ++;
+				print $OUT join("\t", @tmp)."\n";
+			}
+		}
+	};
+	$self->{'OK'} = $self->{'filtered'} = 0;
+	$self->filter_file($file, $function );
+	close ( $OUT );
+	print "$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
+	return $self;
+}
+
+sub select_single_match {
+	my ( $self, $file, $max_hits, $outfile) =@_;
+	my $OUT;
+	$max_hits ||= 1;
+	open ( $OUT, "| samtools view -Sb - > $outfile")  or die "I could not create the outfile $outfile\n $!\n";
+	my $function = sub {
+		my @tmp;
+		if ( $_ =~ m/^\@/ ){ ## process header
+			print $OUT $_."\n";
+		}else {
+			if ( $_ =~ m/NH:i:(\d+)/ and $1 > $max_hits ) { 
+				$self->{'filtered'} ++;
+			}
+			else {
+				$self->{'OK'} ++;
+				print $OUT $_."\n";
+			}
+		}
+	};
+	$self->{'OK'} = $self->{'filtered'} = 0;
+	$self->filter_file($file, $function );
+	close ( $OUT );
+	print "$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
+	return $self;
+}
+
 
 1;
