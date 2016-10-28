@@ -164,7 +164,7 @@ foreach (
 	print SC "module load $_\n";
 }
 ## kick all SLURM options that should not be used for the MACS2
-foreach (qw(n N t mem)) {
+foreach (qw(n N t mem A)) {
 	delete( $options->{$_} );
 }
 close(SC);
@@ -196,7 +196,7 @@ for ( my $i = 0; $i <@files; $i ++ ) {
 		$cmd .= $SLURM->check_4_outfile( "macs2 callpeak -t $fm->{'total'} -c $cfm->{'total'} ", $outfile."_peaks.xls");
 	}
 	
-	foreach my $key ( keys %$options ) {
+	foreach my $key ( sort keys %$options ) {
 		$cmd .= " -$key $options->{$key}";
 	}
 	if ( $bigWig ){

@@ -15,7 +15,7 @@ if ( -d "$plugin_path/data/outpath/SLURM_run/" ) {
 }
 
 $cmd =
-" perl -I $plugin_path/../lib/ $exec -cmd 'Do nothing at all' -outfile '$plugin_path/data/outpath/SLURM_run/SLURM_result.txt' -I_have_loaded_all_modules -debug";
+" perl -I $plugin_path/../lib/ $exec -cmd 'Do nothing at all' -outfile '$plugin_path/data/outpath/SLURM_run/SLURM_result.txt' -options A 'notOfInterest' -I_have_loaded_all_modules -debug";
 
 system($cmd );
 
@@ -37,6 +37,7 @@ $exp = [
 	'#SBATCH -n 10',
 	'#SBATCH -N 1',
 	'#SBATCH -t 02:00:00',
+	'#SBATCH -A notOfInterest',
 	'#SBATCH -J SLURM_result',
 	'#SBATCH -o SLURM_result%j.out',
 	'#SBATCH -e SLURM_result%j.err',
@@ -72,6 +73,7 @@ $exp = [
 	'#SBATCH -n 10',
 	'#SBATCH -N 2',
 	'#SBATCH -t 02:00:00',
+	'#SBATCH -A notOfInterest',
 	'#SBATCH --mail-user someone@somewhere.com',
 	'#SBATCH --mail-type END',
 	'#SBATCH -J SLURM_result',

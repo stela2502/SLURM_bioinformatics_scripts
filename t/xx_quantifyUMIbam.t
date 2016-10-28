@@ -3,8 +3,21 @@ use strict;
 use warnings;
 use stefans_libs::root;
 use Test::More tests => 17;
+
 use stefans_libs::flexible_data_structures::data_table;
 use Digest::MD5;
+
+my $rc = eval
+{
+  require stefans_libs::database::genomeDB;
+  stefans_libs::database::genomeDB->import();
+  1;
+};
+
+
+SKIP: {
+      skip "required lib stefans_libs::database::genome not installed", 17 unless $rc;
+
 
 
 use FindBin;
@@ -82,5 +95,5 @@ for ( my $i = 0; $i < @digests; $i +=2 ) {
 	ok( $digests[$i] eq  ($tmp = $ctx->hexdigest), "outfile $digests[$i+1] ($tmp)");
 }
 
-
+};
 #print "\$exp = ".root->print_perl_var_def($value ).";\n

@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 2;
+use Test::More tests => 1;
 use stefans_libs::flexible_data_structures::data_table;
 
 use FindBin;
@@ -10,6 +10,7 @@ my $plugin_path = "$FindBin::Bin";
 
 my ( $value, @values, $exp, $infile, $outfile, );
 
+map { $_ ||= '' } $infile, $outfile;
 my $exec = $plugin_path . "/../bin/dropUMI_from_bam.pl";
 ok( -f $exec, 'the script has been found' );
 my $outpath = "$plugin_path/data/output/dropUMI_from_bam";

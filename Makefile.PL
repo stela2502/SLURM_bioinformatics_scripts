@@ -15,6 +15,7 @@ requires 'Stefans_Lib_Essentials' => 0;
 requires 'File::Copy' => 0;
 requires 'Parallel::ForkManager' => 0;
 
+
 opendir( DIR, "bin/" ) or die "I could not open the bin folder\n$!\n";
 
 map { install_script "bin/$_" } grep !/^\./,  grep '*.pl', readdir(DIR);

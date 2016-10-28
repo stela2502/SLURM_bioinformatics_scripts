@@ -18,7 +18,7 @@ my $cmd =
     "perl -I $plugin_path/../lib  $exec "
   . "-files $plugin_path/data/test_empty.bam "
   . "-cfiles $plugin_path/data/test_empty.bam "
-  . "-options f BAM g hs q 0.01 -debug";
+  . "-options f BAM g hs q 0.01 A 'snic2016-4-13' -debug";
 
 system($cmd );
 
@@ -35,14 +35,15 @@ $exp = [
 	'#SBATCH -n 1',
 	'#SBATCH -N 1',
 	'#SBATCH -t 02:00:00',
+	'#SBATCH -A snic2016-4-13',
 	'#SBATCH -J test_empty.rmdup',
 	'#SBATCH -o test_empty.rmdup%j.out',
 	'#SBATCH -e test_empty.rmdup%j.err',
 "samtools rmdup $plugin_path/data/test_empty.bam $plugin_path/data/test_empty.rmdup.bam",
 "samtools rmdup $plugin_path/data/test_empty.bam $plugin_path/data/test_empty.rmdup.bam",
-'macs2 callpeak -t /home/med-sal/git_Projects/SLURM_bioinformatics_scripts/t/data/test_empty.rmdup.bam '
-.'-c /home/med-sal/git_Projects/SLURM_bioinformatics_scripts/t/data/test_empty.rmdup.bam '
-.' -f BAM -g hs -q 0.01 --call-summits -n /home/med-sal/git_Projects/SLURM_bioinformatics_scripts/t/data/MACS2_out/test_empty.rmdup',
+"macs2 callpeak -t $plugin_path/data/test_empty.rmdup.bam "
+."-c $plugin_path/data/test_empty.rmdup.bam "
+." -f BAM -g hs -q 0.01 --call-summits -n $plugin_path/data/MACS2_out/test_empty.rmdup",
 
 	''
   ]

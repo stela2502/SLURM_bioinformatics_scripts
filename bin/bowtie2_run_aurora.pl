@@ -164,7 +164,7 @@ my $SLURM = stefans_libs::SLURM->new($options);
 $SLURM->{'debug'} = 1 if ($debug);
 
 ## kick all SLURM options that should not be used for the bowtie
-foreach (qw(n N t mem)) {
+foreach (qw(n N t mem A)) {
 	delete( $options->{$_} );
 }
 
@@ -253,7 +253,7 @@ else {
 		)."\n";
 		$this_cmd .= &chk_cmd($BAM->convert_sorted_bam_2_bedGraph($this_outfile,$coverage));
 		$this_cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage));
-		$SLURM->run( $this_cmd, $fm,$this_outfile );
+		$SLURM->run( $this_cmd, $fm );
 	}
 }
 

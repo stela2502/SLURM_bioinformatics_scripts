@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 2;
+use Test::More tests => 1;
 use stefans_libs::flexible_data_structures::data_table;
 
 use FindBin;
@@ -10,6 +10,8 @@ my $plugin_path = "$FindBin::Bin";
 
 my ( $value, @values, $exp, $adapter, @sample_barcode, $infile, $outfile, );
 
+$sample_barcode[0] ||= "AAGG";
+map { $_ ||= ''} $adapter,$infile, $outfile ;
 my $exec = $plugin_path . "/../bin/Filter_Bellodi_barcodes.pl";
 ok( -f $exec, 'the script has been found' );
 my $outpath = "$plugin_path/data/output/Filter_Bellodi_barcodes";

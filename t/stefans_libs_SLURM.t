@@ -2,16 +2,20 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 5;
+use Test::More tests => 6;
 BEGIN { use_ok 'stefans_libs::SLURM' }
 
 use FindBin;
 my $plugin_path = $FindBin::Bin;
 
 my ( $value, @values, $exp );
-my $SLURM = stefans_libs::SLURM->new( { n => 2, N => 1, t => '01:00:00' } );
+$value = { n => 2, N => 1, t => '01:00:00', A => 'snic2016-4-13' };
+my $SLURM = stefans_libs::SLURM->new( $value );
+
 is_deeply( ref($SLURM), 'stefans_libs::SLURM',
 	'simple test of function stefans_libs::SLURM -> new()' );
+
+is_deeply( $value, {}, "SLURM variables removbed from hash");
 
 $value = $SLURM->script( "some_command.pl", "my_name" );
 
@@ -21,6 +25,7 @@ $exp = [
 	'#SBATCH -n 2',
 	'#SBATCH -N 1',
 	'#SBATCH -t 01:00:00',
+	'#SBATCH -A snic2016-4-13',
 	'#SBATCH -J my_name',
 	'#SBATCH -o my_name%j.out',
 	'#SBATCH -e my_name%j.err',
@@ -44,6 +49,7 @@ $exp = [
 	'#SBATCH -n 2',
 	'#SBATCH -N 1',
 	'#SBATCH -t 01:00:00',
+	'#SBATCH -A snic2016-4-13',
 	'#SBATCH -J stefans_libs_SLURM.a.b.c',
 	'#SBATCH -o stefans_libs_SLURM.a.b.c%j.out',
 	'#SBATCH -e stefans_libs_SLURM.a.b.c%j.err',

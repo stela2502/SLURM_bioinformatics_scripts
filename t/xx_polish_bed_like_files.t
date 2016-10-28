@@ -2,14 +2,14 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 2;
+use Test::More tests => 1;
 use stefans_libs::flexible_data_structures::data_table;
 
 use FindBin;
 my $plugin_path = "$FindBin::Bin";
 
 my ( $value, @values, $exp, $bed_file, );
-
+$bed_file ||= '';
 my $exec = $plugin_path . "/../bin/polish_bed_like_files.pl";
 ok( -f $exec, 'the script has been found' );
 my $outpath = "$plugin_path/data/output/polish_bed_like_files";

@@ -34,7 +34,9 @@ my $cmd =
 . " -options " . join(' ', @options )
 . " -debug";
 
+print $cmd;
 system ( $cmd ) ;
+
 my @digests = (
 '18ebb51714e774d507cf986d22973b59',  'GMLP_S1_R2_001.part.AGATAG.fastq',
 '84e22846c897b926a076e3f72e6b9750',  'GMLP_S1_R2_001.part.ATACGA.fastq',

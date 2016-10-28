@@ -57,11 +57,24 @@ sub new{
 
 	my $self = {
 	};
-	foreach my $key  (keys %$options ) {
-		$self->{$key} = $options->{$key};
-	}
+
 	$self->{'debug'} ||= 0;
 	
+	bless $self, $class  if ( $class eq "stefans_libs::SLURM" );
+	
+	$self->options( $options );
+
+	$self->clean_slurm_options( $options );
+  	return $self;
+}
+
+sub options {
+	my ( $self, $options ) = @_;
+	if ( ref($options) eq "HASH"){
+		foreach my $key  (keys %$options ) {
+			$self->{$key} = $options->{$key};
+		}
+	}
 	if ( defined $self->{'mail-user'} ) {
 		$self->{'mail-type'} ||= 'END';
 		my $OK = { map { $_ => 1 } 'BEGIN', 'END', 'FAIL', 'REQUEUE', 'ALL' };
@@ -70,15 +83,7 @@ sub new{
 			$self->{'mail-type'} = 'END';
 		}
 	}
-	
-
-#BEGIN, END, FAIL, REQUEUE, and ALL (any state change).
-
-
-  	bless $self, $class  if ( $class eq "stefans_libs::SLURM" );
-
-  	return $self;
-
+	return $self;
 }
 
 
@@ -104,7 +109,8 @@ sub script {
 	my @o = qw( n N t A);
 	$self->check( @o );
 	my $ret = '#! /bin/bash'."\n";
-	foreach my $option ( @o ) {
+	foreach my $option ( @o, 'mail-user', 'mail-type' ) {
+		next unless ( $self->{$option} );
 		if ( length( $option) == 1 ) {
 			$ret .= "#SBATCH -$option $self->{$option}\n";
 		}else {
@@ -117,6 +123,12 @@ sub script {
 	return $ret;
 }
 
+sub clean_slurm_options {
+	my ( $self, $hash ) = @_;
+	foreach ( qw( n N t A), 'mail-user', 'mail-type' ) {
+		delete ($hash ->{$_}) if defined ( $hash->{$_}); 
+	}
+}
 =head3 run ( $cmd, $fm )
 
 Creates the run script based on the $fm =stefans_libs::root->filemap($file).

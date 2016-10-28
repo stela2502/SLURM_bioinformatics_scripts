@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 2;
+use Test::More tests => 1;
 use stefans_libs::flexible_data_structures::data_table;
 
 use FindBin;
@@ -17,7 +17,8 @@ if ( -d $outpath ) {
 	system("rm -Rf $outpath");
 }
 
-
+$outfile = "$plugin_path/outpath/someResult.txt";
+$infile ='';
 my $cmd =
     "perl -I $plugin_path/../lib  $exec.pl "
 . " -outfile " . $outfile 

@@ -2,13 +2,16 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 2;
+use Test::More tests => 1;
 use stefans_libs::flexible_data_structures::data_table;
 
 use FindBin;
 my $plugin_path = "$FindBin::Bin";
 
 my ( $value, @values, $exp, $project_id, $access_token, $opath, );
+
+
+map { $_ ||= '' } $project_id, $access_token, $opath;
 
 my $exec = $plugin_path . "/../bin/download_fasta_from_Basespace_usingR.pl";
 ok( -f $exec, 'the script has been found' );

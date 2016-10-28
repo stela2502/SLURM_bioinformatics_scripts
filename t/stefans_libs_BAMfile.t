@@ -1,7 +1,8 @@
 #! /usr/bin/perl
+system( 'module load SAMtools/1.3.1-HTSlib-1.3.1');
 use strict;
 use warnings;
-use Test::More tests => 2;
+use Test::More tests => 9;
 BEGIN { use_ok 'stefans_libs::BAMfile' }
 use stefans_libs::root;
 

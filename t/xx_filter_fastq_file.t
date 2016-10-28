@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 2;
+use Test::More tests => 1;
 use stefans_libs::flexible_data_structures::data_table;
 
 use FindBin;
@@ -10,6 +10,7 @@ my $plugin_path = "$FindBin::Bin";
 
 my ( $value, @values, $exp, $infile, $sequence, $outfile, );
 
+map { $_ ||= ''} $infile, $sequence, $outfile;
 my $exec = $plugin_path . "/../bin/filter_fastq_file.pl";
 ok( -f $exec, 'the script has been found' );
 my $outpath = "$plugin_path/data/output/filter_fastq_file";
