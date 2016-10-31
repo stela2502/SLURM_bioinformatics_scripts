@@ -7,3 +7,4 @@ output
 /InitializeSLURMenv_BASE_8020.sh
 /InitializeSLURMenv_LOCAL_8020.sh
 /InitializeSLURMenv_REMOTE_8020.sh
+/outpath/
