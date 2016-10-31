@@ -20,10 +20,10 @@
 =head1  SYNOPSIS
 
     Zargos2pwm_plot.pl
-       -infile       :<please add some info!>
-       -outpath       :<please add some info!>
-       -options     :<please add some info!> you can specify more entries to that
-                         format: key_1 value_1 key_2 value_2 ... key_n value_n
+       -infile       :one transfaq formated zargos outfile
+       -outpath      :the path where all figures should be plotted to (pdf)
+       -options      :unused
+                      format: key_1 value_1 key_2 value_2 ... key_n value_n
 
 
        -help           :print this help
@@ -71,7 +71,7 @@ unless ( defined $outpath) {
 	$error .= "the cmd line switch -outpath is undefined!\n";
 }
 unless ( defined $options[0]) {
-	$error .= "the cmd line switch -options is undefined!\n";
+	$warn .= "the cmd line switch -options is undefined!\n";
 }
 
 
@@ -127,7 +127,7 @@ my ($logo,@line, $logo_id);
 $logo_id = 1;
 while ( <IN> ) {
 	if ( $_ =~ m/^[P\d]\d\s/ ) {
-		print "Interesting line $_\n";
+		#print "Interesting line $_\n";
 		@line = split( /\s+/, $_ );
 		if ( $line[0] eq "P0" ){
 			if ( defined $logo ) {

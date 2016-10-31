@@ -8,3 +8,4 @@ output
 /InitializeSLURMenv_LOCAL_8020.sh
 /InitializeSLURMenv_REMOTE_8020.sh
 /outpath/
+/.test_zargos_out.txt.swp
