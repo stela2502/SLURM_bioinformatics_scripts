@@ -1,6 +1,6 @@
 package SLURM_bioinformatic_scripts;
 
-our $VERSION = '1.01';
+my $VERSION = '1.01';
 
 
 =head1 AUTHOR

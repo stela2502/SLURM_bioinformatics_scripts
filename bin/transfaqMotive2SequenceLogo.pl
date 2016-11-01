@@ -19,7 +19,7 @@
 
 =head1  SYNOPSIS
 
-    Zargos2pwm_plot.pl
+    transfaqMotive2SequenceLogo.pl
        -infile       :one transfaq formated zargos outfile
        -outpath      :the path where all figures should be plotted to (pdf)
        -options      :unused
@@ -33,7 +33,7 @@
 
   read a zargos output file and create sequence logos from that using the R seqLogo package.
 
-  To get further help use 'Zargos2pwm_plot.pl -help' at the comman line.
+  To get further help use 'transfaqMotive2SequenceLogo.pl -help' at the comman line.
 
 =cut
 
@@ -101,7 +101,7 @@ sub helpString {
 
 my ( $task_description);
 
-$task_description .= 'perl '.$plugin_path .'/Zargos2pwm_plot.pl';
+$task_description .= 'perl '.$plugin_path .'/transfaqMotive2SequenceLogo.pl';
 $task_description .= " -infile '$infile'" if (defined $infile);
 $task_description .= " -outpath '$outpath'" if (defined $outpath);
 $task_description .= ' -options "'.join( '" "', @options ).'"' if ( defined $options[0]);
@@ -115,7 +115,7 @@ for ( my $i = 0 ; $i < @options ; $i += 2 ) {
 #$options->{'something'} ||= 'default value';
 ##############################
 mkdir( $outpath ) unless ( -d $outpath );
-open ( LOG , ">$outpath/".$$."_Zargos2pwm_plot.pl.log") or die $!;
+open ( LOG , ">$outpath/".$$."_transfaqMotive2SequenceLogo.pl.log") or die $!;
 print LOG $task_description."\n";
 close ( LOG );
 
