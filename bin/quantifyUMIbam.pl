@@ -140,10 +140,10 @@ unless ( -f $genome_bed_file or -f  $outpath . "/genome.bed" ) {
 	$genome_bed->write_file( $outpath . "/genome.bed" );
 }
 elsif ( -f $genome_bed_file ) {
-	$genome_bed = stefans_libs_file_readers_bed_file->new();
+	$genome_bed = stefans_libs::file_readers::bed_file->new();
 	$genome_bed->read_file($genome_bed_file);
 }else {
-	$genome_bed = stefans_libs_file_readers_bed_file->new();
+	$genome_bed = stefans_libs::file_readers::bed_file->new();
 	$genome_bed->read_file( $outpath . "/genome.bed" );
 }
 

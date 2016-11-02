@@ -39,7 +39,7 @@
 
 use Getopt::Long;
 use Pod::Usage;
-use stefans_libs::flexible_data_structures::data_table;
+use stefans_libs::file_readers::transfaq;
 
 use strict;
 use warnings;
@@ -122,62 +122,8 @@ close ( LOG );
 
 ## Do whatever you want!
 
-open ( IN , "<$infile" ) or die "I could not open the infile '$infile'\n";
-my ($logo,@line, $logo_id);
-$logo_id = 1;
-while ( <IN> ) {
-	if ( $_ =~ m/^[P\d]\d\s/ ) {
-		#print "Interesting line $_\n";
-		@line = split( /\s+/, $_ );
-		if ( $line[0] eq "P0" ){
-			if ( defined $logo ) {
-				&create_logo( $logo );
-			}
-			$logo = data_table->new();
-			$logo -> Add_2_Header( [ qw(A C G T) ] );
-		}
-		else {
-			$logo->AddDataset ( { 'A' => $line[1], 'C' => $line[2], 'G' => $line[3], 'T' => $line[4]} );
-		}
-	}
-}
-close ( IN );
-if ( defined $logo ) {
-	&create_logo( $logo );
-}
-
+my $OBJ = stefans_libs::file_readers::transfaq -> new({'debug' => $debug, 'filename' => $infile});
+$OBJ -> create_logo( $outpath );
 
 print "Done\n";
 
-sub create_logo {
-	my ( $data_table ) = @_;
-	for  ( my $i = 0; $i < $data_table->Lines(); $i ++ ){
-		&div ( @{$data_table->{'data'}}[$i] );
-	}
-	my $sum = &sum(@{$data_table->{'data'}}[0] ); 
-	$data_table = $data_table->Transpose($data_table);
-	open ( OUTR, ">$outpath/$logo_id"."_$sum.R" ) or die $!;
-	print OUTR "library(seqLogo)\n"."proportion <- function(x){\n"."   rs <- sum(x);\n"."   return(x / rs);\n"."}\n";
-	foreach my $l ( @{$data_table->{'data'}} ) {
-		print OUTR "@$l[0] <- c(".join(", ", @$l[1..(@$l-1)] ).")\n"; 
-	}
-	print  OUTR "df <- data.frame( ".join( ",", @{$data_table->GetAsArray(0)})." )\n"."pwm <- apply(df, 1, proportion)\n"."pwm <- makePWM(pwm)\n"
-	."pdf( file = '$outpath/$logo_id"."_$sum.pdf', width=6, height=6)\n" . "seqLogo(pwm)\n". "dev.off()\n";
-	close ( OUTR );
-	
-	system( "R CMD BATCH --no-save --no-restore --no-readline -- $outpath/$logo_id"."_$sum.R" );
-	
-	$logo_id++;
-}
-
-sub sum {
-	my @val = @{$_[0]};
-	my $ret = 0; 
-	map { $ret += $_ } @val;
-	return $ret;
-}
-sub div {
-	my @val = @{$_[0]};
-	my $sum = &sum($_[0]);
-	map { $val[$_] = $val[$_]/$sum } 0..(@val-1);
-}

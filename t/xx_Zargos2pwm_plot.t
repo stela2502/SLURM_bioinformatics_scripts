@@ -16,9 +16,9 @@ ok ( -f $infile, "test file exists ($infile)" );
 
 $outpath = "$plugin_path/data/output/Zargos2pic";
 
-my $exec = $plugin_path . "/../bin/Zargos2pwm_plot.pl";
+my $exec = $plugin_path . "/../bin/transfaqMotive2SequenceLogo.pl";
 ok( -f $exec, 'the script has been found' );
-my $outpath = "$plugin_path/data/output/Zargos2pwm_plot";
+my $outpath = "$plugin_path/data/output/transfaqMotive2SequenceLogo";
 if ( -d $outpath ) {
 	system("rm -Rf $outpath");
 }
