@@ -149,7 +149,7 @@ my $fm = root->filemap( $infiles[0] );
 open( SC, ">$fm->{'path'}/InitializeSLURMenv.sh" )
   or die "I could not create the SLURM init script\n$!\n";
 
-$options->{'modules'} ||= 'GCCcore/4.9.3 GCC/4.9.3-2.25 GSL/2.1 ucsc-tools/R2016a';
+$options->{'modules'} ||= 'GCCcore/4.9.3 GCC/4.9.3-2.25 GSL/2.1 ucsc-tools/R2016a GSL/2.1 BEDTools/2.25.0';
 
 print SC "module load $options->{'modules'}\n";
 

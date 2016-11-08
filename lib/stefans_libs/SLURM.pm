@@ -109,7 +109,7 @@ sub script {
 	my @o = qw( n N t A);
 	$self->check( @o );
 	my $ret = '#! /bin/bash'."\n";
-	foreach my $option ( @o, 'mail-user', 'mail-type' ) {
+	foreach my $option ( @o, 'mail-user', 'mail-type', 'mem-per-cpu' ) {
 		next unless ( $self->{$option} );
 		if ( length( $option) == 1 ) {
 			$ret .= "#SBATCH -$option $self->{$option}\n";
@@ -125,7 +125,7 @@ sub script {
 
 sub clean_slurm_options {
 	my ( $self, $hash ) = @_;
-	foreach ( qw( n N t A), 'mail-user', 'mail-type' ) {
+	foreach ( qw( n N t A), 'mail-user', 'mail-type', 'mem-per-cpu' ) {
 		delete ($hash ->{$_}) if defined ( $hash->{$_}); 
 	}
 }
