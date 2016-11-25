@@ -26,13 +26,18 @@ sub install_scripts_in_path {
 	my @files =  readdir($PATH);
 	closedir ( $PATH );
 	warn "processing bin folder $dir\n";
-	map { if ( $_ =~ m/^\./ ){} elsif ( -f "$dir/$_" and $_ =~ m/.pl$/ ){ install_script "$dir/$_" } elsif ( -d "$dir/$_" ) { &install_scripts_in_path("$dir/$_") } } @files;
+	map { if ( $_ =~ m/^\./ ){
+		} elsif ( -f "$dir/$_" and $_ =~ m/.pl$/ ){ 
+			&install_script("$dir/$_"); 
+		} elsif ( -d "$dir/$_" ) { 
+			&install_scripts_in_path("$dir/$_") 
+		} } @files;
 	
 }
 
 &install_scripts_in_path('bin');
 
 auto_install();
-WriteAll;
+WriteAll();
 
 
