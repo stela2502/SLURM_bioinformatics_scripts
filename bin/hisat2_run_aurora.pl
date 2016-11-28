@@ -21,6 +21,8 @@
 
     hisat2_run_aurora.pl
        -files     :the input fastq or sra files
+       -outpath   :the outpath for the mapped files 
+                   default to subpath of infile named HISAT2_OUT 
        -sra       :the files are in sra format, not fastq
        -options   :format: key_1 value_1 key_2 value_2 ... key_n value_n
        		n    :number of cores per node (default = 10 )
@@ -65,13 +67,14 @@ my $dir = getcwd . "/";
 my $VERSION = 'v1.0';
 
 
-my ( $help, $debug, $database, @files, $options, @options, $genome, $coverage, $paired, $bigwigTracks, $sra);
+my ( $help, $debug, $database, @files, $options, @options, $genome, $coverage, $paired, $bigwigTracks, $sra, $outpath);
 
 Getopt::Long::GetOptions(
        "-files=s{,}"    => \@files,
        "-options=s{,}"    => \@options,
 	 "-genome=s"    => \$genome,
 	 "-coverage=s"    => \$coverage,
+	 "-outpath=s" => \$outpath,
 	 "-paired"    => \$paired,
 	 "-bigwigTracks=s"    => \$bigwigTracks,
 	 "-sra"    => \$sra,
@@ -208,23 +211,27 @@ sub create_call {
 	return &create_sra_call() if ( $sra );
     my $file = shift(@files);
     my $fm   = root->filemap($file);
-    mkdir ( "$fm->{'path'}/HISAT2_OUT/" ) unless ( -d "$fm->{'path'}/HISAT2_OUT/");
+	my $p = $outpath;
+	$p ||= "$fm->{'path'}/HISAT2_OUT/";
+    mkdir ( "$p/" ) unless ( -d "$p/");
     $fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
-"hisat2 -x $genome -U $fm->{'total'} --threads $options->{proc} --add-chrname > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
-    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam", "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sorted.bam";
+"hisat2 -x $genome -U $fm->{'total'} --threads $options->{proc} --add-chrname > $p/$fm->{'filename_core'}_hisat.sam\n";
+    return $s, "$p/$fm->{'filename_core'}_hisat.sam", "$p/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
 sub create_sra_call {
     my $file = shift( @files);
     my $fm   = root->filemap($file);
-    mkdir ( "$fm->{'path'}/HISAT2_OUT/" ) unless ( -d "$fm->{'path'}/HISAT2_OUT/");
+	my $p = $outpath;
+	$p ||= "$fm->{'path'}/HISAT2_OUT/";
+    mkdir ( "$p/" ) unless ( -d "$p/");
     $fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
-"hisat2 -x $genome --sra-acc $fm->{'total'} --threads $options->{proc} --add-chrname > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
-    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam", "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sorted.bam";
+"hisat2 -x $genome --sra-acc $fm->{'total'} --threads $options->{proc} --add-chrname > $p/$fm->{'filename_core'}_hisat.sam\n";
+    return $s, "$p/$fm->{'filename_core'}_hisat.sam", "$p/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
 sub create_paired_call {
@@ -232,15 +239,17 @@ sub create_paired_call {
     my $pair = shift(@files);
     my $fm   = root->filemap($file);
     my $fm2  = root->filemap($pair);
+	my $p = $outpath;
+	$p ||= "$fm->{'path'}/HISAT2_OUT/";
     $fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
     $fm2->{'path'} = "" if ( $fm2->{'path'} eq "./" );
     $fm->{'path'} .= '/' unless ( $fm->{'path'} =~ m/\/$/ );
     $fm2->{'path'} .= '/' unless ( $fm2->{'path'} =~ m/\/$/ );
-    mkdir ( "$fm->{'path'}/HISAT2_OUT/" ) unless ( -d "$fm->{'path'}/HISAT2_OUT/");
+    mkdir ( "$p/" ) unless ( -d "$p/");
     unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
     my $s =
-"hisat2 -x $genome -1 $fm->{'total'} -2 $fm2->{'total'} --threads $options->{proc} --add-chrname > $fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam\n";
-    return $s, "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sam", "$fm->{'path'}/HISAT2_OUT/$fm->{'filename_core'}_hisat.sorted.bam";
+"hisat2 -x $genome -1 $fm->{'total'} -2 $fm2->{'total'} --threads $options->{proc} --add-chrname > $p/$fm->{'filename_core'}_hisat.sam\n";
+    return $s, "$p/$fm->{'filename_core'}_hisat.sam", "$p/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
 sub chk_cmd {
