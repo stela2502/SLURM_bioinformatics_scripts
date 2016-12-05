@@ -13,8 +13,8 @@ author 'Stefan Lang <Stefan.Lang@med.lu.se>';
 
 #version_from "lib/SLURM_bioinformatic_scripts.pm";
 
-requires 'Stefans_Lib_Essentials' => 0;
-requires 'stefans_libs-GenomeDB' => 0;
+#requires 'Stefans_Lib_Essentials' => 0;
+#requires 'stefans_libs-GenomeDB' => 0;
 requires 'File::Copy' => 0;
 requires 'Parallel::ForkManager' => 0;
 

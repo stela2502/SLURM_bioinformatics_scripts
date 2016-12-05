@@ -186,7 +186,7 @@ while ( scalar(@files) ){
 	$cmd = &chk_cmd(&create_call());
 	$cmd .= &chk_cmd($BAM->convert_sam_2_sorted_bam($this_outfile));
 	$cmd .= &chk_cmd($BAM->convert_sorted_bam_2_bedGraph($this_outfile,$coverage));
-	$cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage));
+#	$cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage)); # brken in the scripts
 	$SLURM->run( $cmd, $fm, $this_outfile);
 }
 
