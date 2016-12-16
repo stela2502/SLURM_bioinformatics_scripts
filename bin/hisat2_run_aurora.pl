@@ -24,11 +24,15 @@
        -outpath   :the outpath for the mapped files 
                    default to subpath of infile named HISAT2_OUT 
        -sra       :the files are in sra format, not fastq
+       -max_jobs  :Define how many different jobs might be sublitted at a time.
+                   default 40
+       -local     :run the alignements one by one on the local comuter
+                   do not use the cluster (not recommended!)
        -options   :format: key_1 value_1 key_2 value_2 ... key_n value_n
        		n    :number of cores per node (default = 10 )
             N    :number of nodes (default =1)
             t    :time untill the script is stopped (default =02:00:0 (2h))
-            proc :hisat 2 number of threads (default = n*N ) 
+            proc :hisat 2 number of threads (default = n*N )
                    
        -genome       :the hisat2 genome information path
        -coverage     :the chromome length file
@@ -67,7 +71,7 @@ my $dir = getcwd . "/";
 my $VERSION = 'v1.0';
 
 
-my ( $help, $debug, $database, @files, $options, @options, $genome, $coverage, $paired, $bigwigTracks, $sra, $outpath);
+my ( $help, $debug, $database, @files, $options, @options, $genome, $coverage, $paired, $bigwigTracks, $sra, $outpath, $max_jobs);
 
 Getopt::Long::GetOptions(
        "-files=s{,}"    => \@files,
@@ -78,6 +82,7 @@ Getopt::Long::GetOptions(
 	 "-paired"    => \$paired,
 	 "-bigwigTracks=s"    => \$bigwigTracks,
 	 "-sra"    => \$sra,
+	 "-max_jobs=s" => \$max_jobs,
 
 	 "-help"             => \$help,
 	 "-debug"            => \$debug
@@ -100,6 +105,9 @@ unless ( -f $coverage) {
 }
 unless ( defined $bigwigTracks) {
 	$error .= "the cmd line switch -bigwigTracks is undefined!\n";
+}
+unless ( $max_jobs ) {
+	$max_jobs = 40;
 }
 
 
@@ -146,6 +154,7 @@ $task_description .= " -coverage '$coverage'" if (defined $coverage);
 $task_description .= " -paired" if ($paired);
 $task_description .= " -bigwigTracks '$bigwigTracks'" if (defined $bigwigTracks);
 $task_description .= " -sra" if ($sra);
+$task_description .= " -max_jobs $max_jobs";
 $task_description .= " -debug" if ($debug);
 
 
@@ -180,6 +189,7 @@ unless ($debug) {
 my $BAM = stefans_libs::scripts::BAM->new($options);
 
 @files = map { $_ =~ s/^\.\///; $_ } @files;
+my $submitted = 0;
 
 while ( scalar(@files) ){
 	$fm  = root->filemap( $files[0] ); ## the files will be depleted by the create_call function!
@@ -187,8 +197,13 @@ while ( scalar(@files) ){
 	$cmd .= &chk_cmd($BAM->convert_sam_2_sorted_bam($this_outfile));
 	$cmd .= &chk_cmd($BAM->convert_sorted_bam_2_bedGraph($this_outfile,$coverage));
 #	$cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage)); # brken in the scripts
-	$SLURM->run( $cmd, $fm, $this_outfile);
-}
+	$tmp = $SLURM->run( $cmd, $fm, $this_outfile);
+	$submitted ++ if ( $tmp == 1 );
+	if ( $submitted >= $max_jobs ) {
+		$submitted -= 50;
+		&wait_for_last_finished( $this_outfile );
+	}
+}	
 
 if ( @{$BAM->{'big_wig_urls'}} > 0 ) {
 	open( OUT, ">$bigwigTracks" )
@@ -203,8 +218,33 @@ if ( @{$BAM->{'big_wig_urls'}} > 0 ) {
 }
 
 
-
 print "Done\n";
+
+
+sub wait_for_last_finished {
+	my ( $fname ) = @_;
+	my $wait;
+	while( $wait = &in_pipeline() > 4 ) {
+		warn "waiting for $wait processes\n";
+		sleep( 50);
+	}
+}
+
+sub in_pipeline {
+	open ( IN ,"whoami |" ) or die $!;
+	my @IN = <IN>;
+	close ( IN );
+	my $name = $IN[0];
+	chomp($name);
+	open(IN, "squeue -u $name |" ) or die $!;
+	@IN = <IN>;
+	close ( IN );
+	## pending
+	return scalar(grep ( /\sPD\s/, @IN));
+	## all
+	return scalar(@IN)-1;
+}
+
 
 sub create_call {
 	return &create_paired_call() if ( $paired );

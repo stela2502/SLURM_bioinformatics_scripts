@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use stefans_libs::root;
+use stefans_libs::file_readers::bed_file;
 =head1 LICENCE
 
   Copyright (C) 2016-10-13 Stefan Lang
@@ -238,6 +239,30 @@ sub select_single_match {
 	close ( $OUT );
 	print "$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
 	return $self;
+}
+
+sub toBed {
+	my ( $self, $file, $outfile ) = @_;
+	my $ret = stefans_libs::file_readers::bed_file->new();
+	#Plate_1_G04_primer1	0	chr1	4493818	60	20M	*	0	0	GGGGAAATAGGAAGGCTGAA	IIIIIIIIIIIIIIIIIIII	AS:i:0	XN:i:0	XM:i:0	XO:i:0	XG:i:0	NM:i:0	MD:Z:20	YT:Z:UU	NH:i:1
+	
+	my $function = sub {
+		my @line;
+		my $add;
+		if ( $_ =~ m/^\@/ ){ ## process header
+		}else {
+			my @line= split( "\t",$_);
+			$add = 0;
+			map { $add += $_ } split(/[MIDNSHPX\=*]/, $line[5] ); 
+			push( @{$ret->{'data'}}, [$line[2],$line[3],$line[3]+ $add, $line[0]] );
+		}
+	};
+	$self->{'OK'} = $self->{'filtered'} = 0;
+	$self->filter_file($file, $function );
+	if ( defined $outfile ) {
+		$ret->write_file($outfile);
+	}
+	return $ret;
 }
 
 

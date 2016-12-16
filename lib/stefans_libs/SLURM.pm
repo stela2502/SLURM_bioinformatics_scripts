@@ -109,6 +109,7 @@ sub script {
 	my @o = qw( n N t A);
 	$self->check( @o );
 	my $ret = '#! /bin/bash'."\n";
+	$ret .= "#SBATCH -p lu\n" if ( $self->{'A'} =~ m/^lu/ );
 	foreach my $option ( @o, 'mail-user', 'mail-type', 'mem-per-cpu' ) {
 		next unless ( $self->{$option} );
 		if ( length( $option) == 1 ) {
@@ -148,14 +149,17 @@ sub run {
 	@OK = grep ( ! /^\s*$/, @OK );
 	if ( @OK > 0 and !$self->{'debug'} ) {	
 		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
-		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" )
+		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" );
+		return 1;
 	}elsif ( @OK == 0) {
 		print "All outfiles present for $fm->{path}/$fm->{'filename_core'}.sh - not run\n";
+		return 0;
 	}
 	else{
 		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh # not run (DEBUG)\n";
+		return 0;
 	}
-	return 1;
+	return 0;
 }
 =head3 check_4_outfile( $cmd, @outfiles)
 
@@ -168,6 +172,7 @@ sub check_4_outfile {
 	Carp::confess ( "I can not check the outfile for '$cmd' - udefined!\n") unless ( defined $outfiles[0]);
 	foreach my $outfile ( @outfiles){
 		if ( -f $outfile ){
+			warn "outfile '$outfile' is present - I will not re-create it!\n";
 			$cmd = "#$cmd";
 			last;
 		}

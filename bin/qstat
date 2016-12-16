@@ -1,0 +1,9 @@
+sinfo
+projinfo -p lu
+projinfo
+echo ""
+echo ""
+sacct -o JobID,JobName,Partition,Account,AllocCPUS,State,ExitCode,ReqMem,UserCPU,SystemCPU,TimeLimit
+echo ""
+echo ""
+squeue -u stefanl
