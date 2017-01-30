@@ -155,6 +155,7 @@ sub run {
 	@OK = grep ( ! /^\s*$/, @OK );
 	if ( @OK > 0 and !$self->{'debug'} ) {	
 		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
+		system( "rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.log");
 		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" );
 		return 1;
 	}elsif ( @OK == 0) {
