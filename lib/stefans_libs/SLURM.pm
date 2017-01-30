@@ -109,7 +109,13 @@ sub script {
 	my @o = qw( n N t A);
 	$self->check( @o );
 	my $ret = '#! /bin/bash'."\n";
-	$ret .= "#SBATCH -p lu\n" if ( $self->{'A'} =~ m/^lu/ );
+	if ( $self->{'partitition'}) {
+		$ret .= "#SBATCH -p $self->{'partitition'}\n"
+	}
+	elsif ( $self->{'A'} =~ m/^lu/ ){ ## add one for each partitition you want to explicitly support
+		$self->{'partitition'} = 'lu';
+		$ret .= "#SBATCH -p lu\n";
+	}
 	foreach my $option ( @o, 'mail-user', 'mail-type', 'mem-per-cpu' ) {
 		next unless ( $self->{$option} );
 		if ( length( $option) == 1 ) {

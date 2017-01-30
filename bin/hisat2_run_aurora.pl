@@ -33,7 +33,9 @@
             N    :number of nodes (default =1)
             t    :time untill the script is stopped (default =02:00:0 (2h))
             proc :hisat 2 number of threads (default = n*N )
-                   
+     partitition :explicitely call for a partitition in the SLURM environment (slurm p option)
+                  should not be necessary!
+     
        -genome       :the hisat2 genome information path
        -coverage     :the chromome length file
        -paired       :analyse paried fasta files 
@@ -203,7 +205,7 @@ while ( scalar(@files) ) {
 	  ;    ## the files will be depleted by the create_call function!
 	$cmd = &chk_cmd( &create_call() );
 	$cmd .= &chk_cmd( $BAM->convert_sam_2_sorted_bam($this_outfile) );
-	$cmd .= &chk_cmd(create_picard_call($this_outfile));
+	$cmd .= &chk_cmd( create_picard_call($this_outfile) );
 	$cmd .=
 	  &chk_cmd(
 		$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) );
@@ -250,6 +252,13 @@ sub in_pipeline {
 	@IN = <IN>;
 	close(IN);
 	## pending
+	## I also need to take care about the different partititions:
+	if ( $SLURM->{'partitition'} ) {
+		@IN = grep( /\s$SLURM->{'partitition'}\s/, @IN );
+	}
+	else {
+		@IN = grep( /\ssnic\s/, @IN );
+	}
 	return scalar( grep ( /\sPD\s/, @IN ) );
 	## all
 	return scalar(@IN) - 1;
@@ -268,7 +277,7 @@ sub create_picard_call {
 	  . " REMOVE_DUPLICATES=TRUE M="
 	  . "$p$fm->{'filename_core'}_picard_metrix.txt";
 	return $s, "$p$fm->{'filename_core'}_picard_deduplicated.bam",
-	"$p$fm->{'filename_core'}_picard_metrix.txt";
+	  "$p$fm->{'filename_core'}_picard_metrix.txt";
 }
 
 sub create_call {
