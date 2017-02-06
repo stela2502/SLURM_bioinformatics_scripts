@@ -4,17 +4,17 @@
 
   Copyright (C) 2017-01-30 Stefan Lang
 
-  This program is free software; you can redistribute it 
-  and/or modify it under the terms of the GNU General Public License 
-  as published by the Free Software Foundation; 
+  This program is free software; you can redistribute it
+  and/or modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation;
   either version 3 of the License, or (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful, 
-  but WITHOUT ANY WARRANTY; without even the implied warranty of 
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License 
+  You should have received a copy of the GNU General Public License
   along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 =head1  SYNOPSIS
@@ -27,7 +27,7 @@
 
        -help           :print this help
        -debug          :verbose output
-   
+
 =head1 DESCRIPTION
 
   This script runs samtools flagstat and removes all bam files that throw an error.
@@ -89,7 +89,7 @@ if ( $error =~ m/\w/ ){
 
 sub helpString {
 	my $errorMessage = shift;
-	$errorMessage = ' ' unless ( defined $errorMessage); 
+	$errorMessage = ' ' unless ( defined $errorMessage);
 	print "$errorMessage.\n";
 	pod2usage(q(-verbose) => 1);
 }
@@ -105,7 +105,7 @@ $task_description .= " -n '$n'" if (defined $n);
 
 
 
-open ( LOG , ">$outfile.log") or die $!;
+open ( LOG , ">$outfile.log") or die "I could not create the logfile '$outfile.log'\n$!\n";
 print LOG $task_description."\n";
 close ( LOG );
 
@@ -113,7 +113,6 @@ close ( LOG );
 ## Do whatever you want!
 
 my $pm = Parallel::ForkManager->new($n);
-
 
 open (OUT, ">$outfile" ) or die "I could not create the outfile '$outfile'\n$!\n";
 print OUT "#filename\tsamtools flagstat error\n";
@@ -139,6 +138,7 @@ foreach my $file ( @files ) {
 			}
 		}
 		$pm->finish; # Terminates the child process
+
 }
 
 $pm->wait_all_children;
