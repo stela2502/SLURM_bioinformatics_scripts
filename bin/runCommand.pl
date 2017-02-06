@@ -20,8 +20,9 @@
 =head1  SYNOPSIS
 
     runCommand.pl
-       -cmd     :The command you want to run
-       -options :format: key_1 value_1 key_2 value_2 ... key_n value_n
+       -cmd      :The command you want to run
+       -max_jobs :The maximum numer of jobs to the SLURM system for this user (default 40)
+       -options  :format: key_1 value_1 key_2 value_2 ... key_n value_n
        		n  :amount of cores per node
        		N  :amount of nodes
        		
@@ -53,13 +54,14 @@ my $plugin_path = "$FindBin::Bin";
 my $VERSION = 'v1.0';
 
 
-my ( $help, $debug, $database, $cmd, $options, @options, $I_have_loaded_all_modules, $outfile);
+my ( $help, $debug, $database, $cmd, $options, @options, $I_have_loaded_all_modules, $outfile, $max_jobs);
 
 Getopt::Long::GetOptions(
 	 "-cmd=s"    => \$cmd,
        "-options=s{,}"    => \@options,
 	 "-outfile=s"    => \$outfile,
 	 "-I_have_loaded_all_modules" => \$I_have_loaded_all_modules,
+	 "-max_jobs=s" => \$max_jobs,
 
 	 "-help"             => \$help,
 	 "-debug"            => \$debug
@@ -79,6 +81,9 @@ unless ( defined $outfile) {
 }
 unless ( $I_have_loaded_all_modules ){
 	$error .= "Please make sure you have loaded all required modules and try again! (-I_have_loaded_all_modules missing)\n"
+}
+unless ( $max_jobs ){
+	$max_jobs = 40;
 }
 
 
@@ -106,6 +111,7 @@ $task_description .= 'perl '.$plugin_path .'/runCommand.pl';
 $task_description .= " -cmd '$cmd'" if (defined $cmd);
 $task_description .= ' -options "'.join( '" "', @options ).'"' if ( defined $options[0]);
 $task_description .= " -outfile '$outfile'" if (defined $outfile);
+$task_description .= " -max_jobs $max_jobs";
 
 my $fm = root->filemap( $outfile);
 unless ( -d $fm->{'path'} ) {
@@ -128,7 +134,7 @@ $options->{'t'} ||= '02:00:00';
 $options->{'proc'} ||= $options->{'n'}*$options->{'N'};
 $options->{'p'} ||= $options->{'proc'};
 $options->{'debug'} = $debug;
-
+$options->{'max_jobs'} ||= $max_jobs;
 
 my $SLURM =stefans_libs::SLURM->new( $options );
 

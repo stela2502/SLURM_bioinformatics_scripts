@@ -169,6 +169,10 @@ $task_description .= " -debug"          if ($debug);
 
 ## Do whatever you want!
 
+open ( LOG, ">$bigwigTracks.log" ) or die "I could not create the log file '$bigwigTracks.log'\n$!\n";
+print LOG $task_description;
+close (LOG);
+
 my ( $cmd, $fm, @big_wig_urls, $tmp, $this_outfile );
 
 my $SLURM = stefans_libs::SLURM->new($options);
@@ -184,7 +188,7 @@ open( SC, ">$fm->{'path'}/InitializeSLURMenv.sh" )
   or die "I could not create the SLURM init script\n$!\n";
 
 foreach (
-	'icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 HISAT2/2.0.4 BEDTools/2.25.0',
+	'icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 HISAT2/2.0.4 BEDTools/2.25.0 Java/1.8.0_92 picard/2.8.2',
 	stefans_libs::scripts::BAM->SLURUM_load(),
   )
 {
@@ -215,7 +219,7 @@ while ( scalar(@files) ) {
 	$submitted++ if ( $tmp == 1 );
 	if ( $submitted >= $max_jobs ) {
 		$submitted -= 50;
-		&wait_for_last_finished($this_outfile);
+		$SLURM->wait_for_last_finished($this_outfile);
 	}
 }
 
@@ -233,36 +237,36 @@ if ( @{ $BAM->{'big_wig_urls'} } > 0 ) {
 
 print "Done\n";
 
-sub wait_for_last_finished {
-	my ($fname) = @_;
-	my $wait;
-	while ( $wait = &in_pipeline() > 4 ) {
-		warn "waiting for $wait processes\n";
-		sleep(50);
-	}
-}
-
-sub in_pipeline {
-	open( IN, "whoami |" ) or die $!;
-	my @IN = <IN>;
-	close(IN);
-	my $name = $IN[0];
-	chomp($name);
-	open( IN, "squeue -u $name |" ) or die $!;
-	@IN = <IN>;
-	close(IN);
-	## pending
-	## I also need to take care about the different partititions:
-	if ( $SLURM->{'partitition'} ) {
-		@IN = grep( /\s$SLURM->{'partitition'}\s/, @IN );
-	}
-	else {
-		@IN = grep( /\ssnic\s/, @IN );
-	}
-	return scalar( grep ( /\sPD\s/, @IN ) );
-	## all
-	return scalar(@IN) - 1;
-}
+#sub wait_for_last_finished {
+#	my ($fname) = @_;
+#	my $wait;
+#	while ( $wait = &in_pipeline() > 4 ) {
+#		warn "waiting for $wait processes\n";
+#		sleep(50);
+#	}
+#}
+#
+#sub in_pipeline {
+#	open( IN, "whoami |" ) or die $!;
+#	my @IN = <IN>;
+#	close(IN);
+#	my $name = $IN[0];
+#	chomp($name);
+#	open( IN, "squeue -u $name |" ) or die $!;
+#	@IN = <IN>;
+#	close(IN);
+#	## pending
+#	## I also need to take care about the different partititions:
+#	if ( $SLURM->{'partitition'} ) {
+#		@IN = grep( /\s$SLURM->{'partitition'}\s/, @IN );
+#	}
+#	else {
+#		@IN = grep( /\ssnic\s/, @IN );
+#	}
+#	return scalar( grep ( /\sPD\s/, @IN ) );
+#	## all
+#	return scalar(@IN) - 1;
+#}
 
 sub create_picard_call {
 	my ($file) = @_;
@@ -276,8 +280,7 @@ sub create_picard_call {
 	  . "$p$fm->{'filename_core'}_picard_deduplicated.bam"
 	  . " REMOVE_DUPLICATES=TRUE M="
 	  . "$p$fm->{'filename_core'}_picard_metrix.txt";
-	return $s, "$p$fm->{'filename_core'}_picard_deduplicated.bam",
-	  "$p$fm->{'filename_core'}_picard_metrix.txt";
+	return $s, "$p$fm->{'filename_core'}_picard_deduplicated.bam";
 }
 
 sub create_call {

@@ -105,7 +105,7 @@ $task_description .= " -n '$n'" if (defined $n);
 
 
 
-open ( LOG , ">$outfile.log") or die $!;
+open ( LOG , ">$outfile.log") or die "I could not create the logfile '$outfile.log'\n$!\n";
 print LOG $task_description."\n";
 close ( LOG );
 

@@ -63,7 +63,16 @@ sub new{
 	bless $self, $class  if ( $class eq "stefans_libs::SLURM" );
 	
 	$self->options( $options );
-
+	
+	$self->{'max_jobs'} ||= 40;
+	
+	open( IN, "whoami |" ) or die $!;
+	my @IN = <IN>;
+	close(IN);
+	my $name = $IN[0];
+	chomp($name);
+	$self->{'username'} = $name;
+	
 	$self->clean_slurm_options( $options );
   	return $self;
 }
@@ -85,6 +94,40 @@ sub options {
 	}
 	return $self;
 }
+
+sub wait_for_last_finished {
+	my ($self, $fname) = @_;
+	my $wait;
+	while ( $wait = $self->in_pipeline('PD') > 4 ) {
+		warn "waiting for $wait processes\n";
+		sleep(50);
+	}
+}
+
+sub in_pipeline {
+	my $self = shift;
+	my $select = shift;
+	#print "squeue -u $self->{'username'}\n";
+	open( IN, "squeue -u $self->{'username'} |" ) or die $!;
+	my @IN = <IN>;
+	close(IN);
+	## pending
+	## I also need to take care about the different partititions:
+	#print "In total ".scalar(@IN)." jobs\n";
+	if ( $self->{'partitition'} ) {
+		@IN = grep( /\s$self->{'partitition'}\s/, @IN );
+		#print scalar(@IN)." jobs in partitcion $self->{'partitition'}\n";
+	}
+	else {
+		@IN = grep( /\ssnic\s/, @IN );
+	}
+	if ( $select ){
+		return scalar( grep ( /\s$select\s/, @IN ) );
+	}
+	## all
+	return scalar(@IN) - 1;
+}
+
 
 
 =head3 script ( $cmd )
@@ -146,16 +189,25 @@ The script will be created in $fm->{path} and run using SBATCH if the debug valu
 
 sub run {
 	my ( $self, $cmd, $fm ) = @_;
+
+	unless ( ref($fm) eq "HASH" ){
+		$fm = root->filemap($fm);
+	}
 	my $s = $self->script($cmd, $fm->{'filename_core'} );
 	open ( OUT ,">$fm->{path}/$fm->{'filename_core'}.sh" ) or Carp::confess ( "I can not create the script file '$fm->{path}/$fm->{'filename_core'}.sh'\n$!\n");
 	print OUT $s;
 	close ( OUT );
 	my @ALL = split("\n", $cmd);
 	my @OK = grep( ! /^#/, @ALL );
-	@OK = grep ( ! /^\s*$/, @OK );
+	@OK = grep ( ! /^\s*$/, @OK );	
+	
 	if ( @OK > 0 and !$self->{'debug'} ) {	
+	#	print "test if I am allowed to submitt the job: ($self->{'partitition'},$self->{'max_jobs'}) ".$self-> in_pipeline()." >= $self->{'max_jobs'}?\n";
+		if ( $self-> in_pipeline () >= $self->{'max_jobs'}){
+			$self->wait_for_last_finished();
+		}
 		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
-		system( "rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.log");
+		system( "rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out");
 		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" );
 		return 1;
 	}elsif ( @OK == 0) {
