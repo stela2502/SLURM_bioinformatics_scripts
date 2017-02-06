@@ -1,17 +1,17 @@
 package stefans_libs::SLURM;
 #  Copyright (C) 2016-05-31 Stefan Lang
 
-#  This program is free software; you can redistribute it 
-#  and/or modify it under the terms of the GNU General Public License 
-#  as published by the Free Software Foundation; 
+#  This program is free software; you can redistribute it
+#  and/or modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation;
 #  either version 3 of the License, or (at your option) any later version.
 
-#  This program is distributed in the hope that it will be useful, 
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of 
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #  See the GNU General Public License for more details.
 
-#  You should have received a copy of the GNU General Public License 
+#  You should have received a copy of the GNU General Public License
 #  along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #use FindBin;
@@ -59,9 +59,9 @@ sub new{
 	};
 
 	$self->{'debug'} ||= 0;
-	
+
 	bless $self, $class  if ( $class eq "stefans_libs::SLURM" );
-	
+
 	$self->options( $options );
 
 	$self->clean_slurm_options( $options );
@@ -123,7 +123,7 @@ sub script {
 		}else {
 			$ret .= "#SBATCH --$option $self->{$option}\n";
 		}
-		
+
 	}
 	$ret .= join("\n", "#SBATCH -J $name","#SBATCH -o $name"."%j.out","#SBATCH -e $name"."%j.err");
 	$ret .= "\n$cmd\n";
@@ -132,8 +132,8 @@ sub script {
 
 sub clean_slurm_options {
 	my ( $self, $hash ) = @_;
-	foreach ( qw( n N t A), 'mail-user', 'mail-type', 'mem-per-cpu' ) {
-		delete ($hash ->{$_}) if defined ( $hash->{$_}); 
+	foreach my $t ( qw( n N t A), 'mail-user', 'mail-type', 'mem-per-cpu' ) {
+		delete ($hash ->{$t}) if defined ( $hash->{$t}); 
 	}
 }
 =head3 run ( $cmd, $fm )
@@ -153,7 +153,7 @@ sub run {
 	my @ALL = split("\n", $cmd);
 	my @OK = grep( ! /^#/, @ALL );
 	@OK = grep ( ! /^\s*$/, @OK );
-	if ( @OK > 0 and !$self->{'debug'} ) {	
+	if ( @OK > 0 and !$self->{'debug'} ) {
 		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
 		system( "rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.log");
 		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" );
