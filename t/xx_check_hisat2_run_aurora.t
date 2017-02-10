@@ -56,14 +56,15 @@ $exp = [
 	'#SBATCH -J test_empty.fastq',
 	'#SBATCH -o test_empty.fastq%j.out',
 	'#SBATCH -e test_empty.fastq%j.err',
+	'module load icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 HISAT2/2.0.4 BEDTools/2.25.0 Java/1.8.0_92 picard/2.8.2 BEDTools/2.25.0 ',
 "hisat2 -x $plugin_path/data/hg38/hg38 -U $plugin_path/data/test_empty.fastq.gz --threads 2 --add-chrname > $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam",
 "samtools view -Sb  $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam | samtools sort -@ 1 -o $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam -",
 "if  [ -f $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam ]&&[ -s $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam ]; then",
 "rm -f $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam",
 	'fi',
-"bedtools genomecov -bg -split -ibam $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam -g $plugin_path/data/fake_hg38.chrom.sizes.txt | sort -k1,1 -k2,2n > $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph",
-"polish_bed_like_files.pl -bed_file $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph",
-"bedGraphToBigWig $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph $plugin_path/data/fake_hg38.chrom.sizes.txt $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bw",
+	"picard MarkDuplicates INPUT=$plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam OUTPUT=$plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted_picard_deduplicated.bam REMOVE_DUPLICATES=TRUE M=$plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted_picard_metrix.txt",
+"bedtools genomecov -bg -split -ibam $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted_picard_deduplicated.bam -g $plugin_path/data/fake_hg38.chrom.sizes.txt | sort -k1,1 -k2,2n > $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted_picard_deduplicated.bedGraph",
+#"bedGraphToBigWig $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph $plugin_path/data/fake_hg38.chrom.sizes.txt $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bw",
 	''
   ];
 
@@ -74,7 +75,7 @@ $exp = $value; ## I want to check the comments
 system ( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam");
 
 &run_cmd_and_read_script();
-@$exp[8] = "#@$exp[8]";
+@$exp[9] = "#@$exp[9]";
 
 is_deeply( $value, $exp, "The sam creation was blocked" );
 
@@ -82,24 +83,25 @@ unlink( "$plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sam" );
 system ( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted.bam");
 
 &run_cmd_and_read_script(); ## all sam and sorted.bam creation should be blocked
-foreach ( 9..12) {
+foreach ( 10..13) {
 	@$exp[$_] = "#".@$exp[$_];
 }
 
 is_deeply( $value, $exp, "All sam and sorted.bam creation was blocked" );
 
-system( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bedGraph");
+system( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted_picard_deduplicated.bam");
 &run_cmd_and_read_script(); ## all sam and sorted.bam creation should be blocked
-@$exp[13] = "#@$exp[13]";
+@$exp[14] = "#@$exp[14]";
 
 is_deeply( $value, $exp, "All sam, sorted.bam and bedGraph creation was blocked" );
 
+system( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.sorted_picard_deduplicated.bedGraph");
 system( "touch $plugin_path/data/HISAT2_OUT/test_empty.fastq_hisat.bw");
 
 &run_cmd_and_read_script();
-@$exp[14] = "#@$exp[14]";
-if ( defined @$exp[15] ) {
-	@$exp[15] = "#@$exp[15]";
+@$exp[15] = "#@$exp[15]";
+if ( defined @$exp[16] and  @$exp[16] =~ m/\w/) {
+	@$exp[16] = "#@$exp[16]";
 }
 is_deeply( $value, $exp, "All sam, sorted.bam, bedGraph and bw creation was blocked" );
 

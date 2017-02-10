@@ -56,6 +56,7 @@ sub new{
 	my ( $class, $options ) = @_;
 
 	my $self = {
+		'SLURM_modules' => [],
 	};
 
 	$self->{'debug'} ||= 0;
@@ -104,6 +105,24 @@ sub wait_for_last_finished {
 	}
 }
 
+sub pids_finished {
+	my ( $self, @pids ) = @_;
+	return 1 unless ( @pids );
+	my $cmd = "squeue -u $self->{'username'} |";
+	open( IN, $cmd ) or die $!;
+	my @IN = <IN>;
+	close(IN);
+	my $ret = 1;
+	my (@line);
+	my $search = { map { $_ => 1} @pids };
+	foreach ( @IN ) {
+		$_ =~ s/^\s*//;
+		@line=split(/\s+/,$_);
+		$ret = 0 if ( $search->{$line[0]});
+	}
+	return $ret;
+}
+
 sub in_pipeline {
 	my $self = shift;
 	my $select = shift;
@@ -148,7 +167,7 @@ Creates a script file string like that:
 
 sub script {
 	my ( $self, $cmd, $name ) = @_;
-	$self->check ( { cmd=>$cmd, name=> $name}, 'cmd', 'name' );
+	&check ( { cmd=>$cmd, name=> $name}, 'cmd', 'name' );
 	my @o = qw( n N t A);
 	$self->check( @o );
 	my $ret = '#! /bin/bash'."\n";
@@ -169,8 +188,47 @@ sub script {
 
 	}
 	$ret .= join("\n", "#SBATCH -J $name","#SBATCH -o $name"."%j.out","#SBATCH -e $name"."%j.err");
+	if ( @{$self->{'SLURM_modules'}} ) {
+		$ret .= "\n". $self->load_SLURM_modules();
+	}
 	$ret .= "\n$cmd\n";
 	return $ret;
+}
+
+sub load_R_x11 {
+	my ( $self ) = @_;
+	my $cmd = $self->load_SLURM_modules ( 'ifort/2016.1.150-GCC-4.9.3-2.25',  'impi/5.1.2.150', 'R/3.2.3-libX11-1.6.3');
+	print "please run\n$cmd" if ( $cmd =~ m/\w/ );
+	return $cmd;
+}
+
+sub load_SLURM_modules {
+	my ( $self, @modules ) = @_;
+	system("bash -c 'module list 2> /tmp/modulelist.tmp'" );
+	open ( IN, "</tmp/modulelist.tmp" ) or die "could not open the tmp module list (/tmp/modulelist.tmp)\n$!\n";
+	my $loaded;
+	foreach ( <IN> ) {
+		next if ( $_ =~ m/Currently Loaded Modules/);
+		chomp($_);
+		$_ =~s/\s+\d+\)\s+/;/g;
+		map{ if ( $_ =~ m/\w/ ) {$loaded -> {$_} = 1 } } split(";" ,$_);
+	}
+	close ( IN );
+	unlink( "/tmp/modulelist.tmp" );
+	
+	print "Hope there is some loaded module?: ".root->print_perl_var_def( $loaded ) if ( $self->{debug});
+	
+	my $modules_to_load = '';
+	if ( @{$self->{'SLURM_modules'}}) {
+		push (@modules,  @{$self->{'SLURM_modules'}});
+	}
+	foreach ( @modules ){
+		$modules_to_load .= "$_ " unless ( $loaded->{$_});
+	}
+	if ($modules_to_load =~m/\w/ ) {
+		return "module load $modules_to_load";
+	}
+	return "";	
 }
 
 sub clean_slurm_options {
@@ -208,7 +266,12 @@ sub run {
 		}
 		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
 		system( "rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out");
-		system( "sbatch $fm->{path}/$fm->{'filename_core'}.sh" );
+		open(PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
+		my $tmp = join("", <PID>);
+		print $tmp;
+		if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
+			return $1;
+		}
 		return 1;
 	}elsif ( @OK == 0) {
 		print "All outfiles present for $fm->{path}/$fm->{'filename_core'}.sh - not run\n";

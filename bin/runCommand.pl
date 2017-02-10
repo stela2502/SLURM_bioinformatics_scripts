@@ -25,9 +25,10 @@
        -options  :format: key_1 value_1 key_2 value_2 ... key_n value_n
        		n  :amount of cores per node
        		N  :amount of nodes
-       		
+       		A  :the accout to use (lu2016-2-7)
        -outfile :the outfile that will be created during the run (to check whether it should be run or not.)
 
+       -I_have_loaded_all_modules :add this switch (no value) and mean it ;-)
 
        -help           :print this help
        -debug          :verbose output
@@ -127,7 +128,7 @@ close ( LOG );
 
 
 ## Do whatever you want!
-
+$options->{'A'} ||= 'lu2016-2-7';
 $options->{'n'} ||= 10;
 $options->{'N'} ||= 1;
 $options->{'t'} ||= '02:00:00';

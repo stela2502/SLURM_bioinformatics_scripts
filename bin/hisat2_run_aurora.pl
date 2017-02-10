@@ -184,20 +184,10 @@ foreach (qw(n N t mem)) {
 }
 
 $fm = root->filemap( $files[0] );
-open( SC, ">$fm->{'path'}/InitializeSLURMenv.sh" )
-  or die "I could not create the SLURM init script\n$!\n";
 
-foreach (
-	'icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 HISAT2/2.0.4 BEDTools/2.25.0 Java/1.8.0_92 picard/2.8.2',
+$SLURM -> {'SLURM_modules'} = [	'icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 HISAT2/2.0.4 BEDTools/2.25.0 Java/1.8.0_92 picard/2.8.2',
 	stefans_libs::scripts::BAM->SLURUM_load(),
-  )
-{
-	print SC "module load $_\n";
-}
-close(SC);
-unless ($debug) {
-	system("bash $fm->{'path'}/InitializeSLURMenv.sh");
-}
+  ];
 
 my $BAM = stefans_libs::scripts::BAM->new($options);
 
@@ -289,7 +279,7 @@ sub create_call {
 	my $file = shift(@files);
 	my $fm   = root->filemap($file);
 	my $p    = $outpath;
-	$p ||= "$fm->{'path'}/HISAT2_OUT/";
+	$p ||= "$fm->{'path'}/HISAT2_OUT";
 	mkdir("$p/") unless ( -d "$p/" );
 	$fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
 	unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
@@ -303,7 +293,7 @@ sub create_sra_call {
 	my $file = shift(@files);
 	my $fm   = root->filemap($file);
 	my $p    = $outpath;
-	$p ||= "$fm->{'path'}/HISAT2_OUT/";
+	$p ||= "$fm->{'path'}/HISAT2_OUT";
 	mkdir("$p/") unless ( -d "$p/" );
 	$fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
 	unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
@@ -319,7 +309,7 @@ sub create_paired_call {
 	my $fm   = root->filemap($file);
 	my $fm2  = root->filemap($pair);
 	my $p    = $outpath;
-	$p ||= "$fm->{'path'}/HISAT2_OUT/";
+	$p ||= "$fm->{'path'}/HISAT2_OUT";
 	$fm->{'path'}  = "" if ( $fm->{'path'} eq "./" );
 	$fm2->{'path'} = "" if ( $fm2->{'path'} eq "./" );
 	$fm->{'path'}  .= '/' unless ( $fm->{'path'} =~ m/\/$/ );

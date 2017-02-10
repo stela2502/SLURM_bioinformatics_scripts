@@ -30,7 +30,7 @@ use stefans_libs::flexible_data_structures::data_table;
        -cfiles    :the control sorted.bam files or sorted.rmdup.bam files you have
        -options   :additional options to the MACS2 in the format
                    key_1 value_1 key_2 value_2 ... key_n value_n
-                   e.g.: g hs f BAM q 0.01
+                   e.g.: g hs f BAM q 0.01 A lu2016-2-7
        -broad     :whether to call broad peaks or not
        -bigWig    :produce bigwig files?
        -normdup   :NOT drop pcr duplicates?
@@ -78,7 +78,7 @@ my $error = '';
 unless ( -f $files[0]) {
 	$error .= "the cmd line switch -files is undefined!\n";
 }
-unless ( -f $cfiles[0]) {
+unless ( defined $cfiles[0] and -f $cfiles[0]) {
 	unless ( $noControl ){
 	my $d = data_table->new ( {'filename' => $files[0] } );
 	if ( defined $d->Header_Position( 'files') ) {
@@ -157,7 +157,7 @@ open( SC, ">$fm->{'path'}/InitializeSLURMenvMACS2.sh" )
 foreach (
 	'GCC/4.9.3-2.25 OpenMPI/1.10.2',
 	'icc/2015.3.187-GNU-4.9.3-2.25  impi/5.0.3.048',
-	'SAMtools/0.1.20 ','MACS2/2.1.0.20150731-Python-2.7.11'
+	'SAMtools/0.1.20 ','MACS2/2.1.0.20150731-Python-2.7.11', 'libgd/2.1.1'
 	#'libpng/1.6.19',               ## bedGraphToBigWig would need that - not supported at all
   )
 {
