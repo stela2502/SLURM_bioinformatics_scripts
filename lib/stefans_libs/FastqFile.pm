@@ -5,6 +5,8 @@ package stefans_libs::FastqFile;
 use strict;
 use warnings;
 
+use stefans_libs::FastqFile::FastqEntry;
+
 =head1 LICENCE
 
   Copyright (C) 2016-10-11 Stefan Lang
@@ -107,13 +109,53 @@ sub filter_file {
 	return $self;
 }
 
+
+=head2 filter_multiple_files ($function, @files )
+
+this function iterates over several fastq files (no GLOB just the filename!).
+It will apply the function $function on n total fastq entries only:
+&{$function}( @fastq_entries )
+
+=cut
+
+sub filter_multiple_files {
+	my ($self, $function, @files ) = @_;
+	my @objects = map{ $self->open_file($_) } @files;
+	my ( @lines );
+	while ( 1 ) {
+		@lines = map { $self->read_file_line($_) } @objects;
+		last unless ($lines[0]);
+		for (my $i = 0; $i < @lines; $i ++) {
+			$lines[$i] = $self->fastq_line($lines[$i],$i);
+		}
+		next unless ($lines[0]);
+		&{$function}( $self, @lines );
+	}
+	return $self;
+}
+
+=head2 read_file_line
+
+## code taken from http://stackoverflow.com/questions/2498937/how-can-i-walk-through-two-files-simultaneously-in-perl
+
+=cut
+
+sub read_file_line {
+  my ( $self, $fh) = @_;
+  if ($fh and my $line = <$fh>) {
+  	return $line
+  }
+  return undef;
+}
+
 sub fastq_line{
-	my ( $self, $line) = @_;
-	push ( @{$self->{fastq_entry}}, $line );
-	if ( @{$self->{fastq_entry}} == 4 ){
-		my $ret =[@{$self->{fastq_entry}}];
-		$self->{fastq_entry} = [];
-		return $ret;
+	my ( $self, $line, $id ) = @_;
+	$id ||= 0;
+	$self->{fastq_entry} ||= [];
+	@{$self->{fastq_entry}}[$id] ||= stefans_libs::FastqFile::FastqEntry->new();
+	@{$self->{fastq_entry}}[$id]->Add( $line );
+	if ( @{$self->{fastq_entry}}[$id]->is_filled() ){
+		return @{$self->{fastq_entry}}[$id];
 	}
 	return undef;
 }
@@ -125,12 +167,14 @@ sub exclude_read {
 	my $function = sub {
 		my $tmp = $self->fastq_line($_);
 		if ( defined $tmp ) {
-			if ( @$tmp[1] eq $str){
+			if ( $tmp->sequence() eq $str){
 				$self->{'filtered'} ++;
+				$tmp->clear();
 				return;
 			}
 			$self->{'OK'} ++;
-			print $OUT join("\n", @$tmp)."\n";
+			$tmp->write( $OUT );
+			$tmp->clear();
 		}
 	};
 	$self->{'OK'} = $self->{'filtered'} = 0;
@@ -184,7 +228,7 @@ sub extract_barcode{
 		my $overlap;
 		my $add;
 		if ( defined $tmp ) {
-			if ( @$tmp[1] =~ m/$pattern/ and  $-[1] < $startingPos ){
+			if ( $tmp->sequence() =~ m/$pattern/ and  $-[1] < $startingPos ){
 				$self->{'OK'} ++;
 				$add = ":$1$2";
 				$seq = $3;
@@ -193,14 +237,16 @@ sub extract_barcode{
 					$seq =~ s/$overlap$//;
 					$add = ":AD".length($overlap).$add;
 				}
-				my @tt = split(" ", @$tmp[0]);
-				@$tmp[0] =$tt[0]."$add ".$tt[1];
-				@$tmp[1] =~ m/$seq/;
-				@$tmp[3] = substr( @$tmp[3], $-[0], $+[0]- $-[0] );
-				@$tmp[1] = $seq;
-				print $OUT join("\n", @$tmp)."\n";
+				my @tt = split(" ", $tmp->name());
+				$tmp->name( $tt[0]."$add ".$tt[1] );
+				$tmp->sequence() =~ m/$seq/;
+				$tmp->quality( substr( $tmp->quality(), $-[0], $+[0]- $-[0] ) );
+				$tmp->sequence( $seq );
+				$tmp -> write( $OUT );
+				$tmp -> clear();
 			}else {
 				$self->{'filtered'} ++;
+				$tmp -> clear();
 			}
 		}
 	};
@@ -219,11 +265,13 @@ sub select_4_str {
 	my $function = sub {
 		my $tmp = $self->fastq_line($_);
 		if ( defined $tmp ) {
-			if ( @$tmp[$where] =~ m/$str/ ){
+			if ( @{$tmp->{'data'}}[$where] =~ m/$str/ ){
 				$self->{'OK'} ++;
-				print $OUT join("\n", @$tmp)."\n";
+				$tmp->write($OUT);
+				$tmp -> clear();
 			}else {
 				$self->{'filtered'} ++;
+				$tmp -> clear();
 			}
 		}
 	};
