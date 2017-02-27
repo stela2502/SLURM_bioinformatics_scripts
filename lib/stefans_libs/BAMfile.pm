@@ -82,7 +82,7 @@ sub open_file {
 		open ( $F, "<$file" );
 	}
 	else {
-		Carp::confes ( "Sorry, but ".ref($self)." can not open this file for you : $file\nFormat not supported (not *.bam or *.sam)\n");
+		Carp::confess ( "Sorry, but ".ref($self)." can not open this file for you : $file\nFormat not supported (not *.bam or *.sam)\n");
 	}
 	return $F;
 }

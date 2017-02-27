@@ -43,7 +43,6 @@ A simple interface to a fastq file
 
 =cut
 
-
 =head1 METHODS
 
 =head2 new ( $hash )
@@ -53,62 +52,79 @@ All entries of the hash will be copied into the objects hash - be careful t use 
 
 =cut
 
-sub new{
+sub new {
 
 	my ( $class, $hash ) = @_;
 
-	my ( $self );
+	my ($self);
 
-	$self = {
-		fastq_entry => [],
-  	};
-  	foreach ( keys %{$hash} ) {
-  		$self-> {$_} = $hash->{$_};
-  	}
+	$self = { fastq_entry => [], };
+	foreach ( keys %{$hash} ) {
+		$self->{$_} = $hash->{$_};
+	}
 
-  	bless $self, $class  if ( $class eq "stefans_libs::FastqFile" );
+	bless $self, $class if ( $class eq "stefans_libs::FastqFile" );
 
-  	return $self;
+	return $self;
 
 }
 
-sub open_file{
+sub open_file {
 	my ( $self, $fname ) = @_;
 	unless ( -f $fname ) {
-		Carp::confess ( "The infile $fname does not exist here!\n" );
+		Carp::confess("The infile $fname does not exist here!\n");
 	}
 	my $file;
 	if ( $fname =~ m/gz$/ ) {
-		open ( $file , "zcat $fname |") 
-	}else {
-		open ( $file , "<$fname") 
+		open( $file, "zcat $fname |" );
+	}
+	else {
+		open( $file, "<$fname" );
 	}
 	return $file;
 }
 
-=head2 file_filter ( fname, sub funciton {}  )
+=head2 file_filter ( sub function { my ( $fastqFile, $entry) = @_; } ,fname  )
 
-the filter function has to process the fastq file all by itself!
-It is called like that:
+the filter function has to process the fastq file entry by entry.
 
-while ( <$file> ) {
-	chomp($_);
-	&{$filter}( $self, $_ );
-}
+=head3 example usage
+
+my $fastqObj = stefans_libs::FastqFile->new();
+
+open ( my $OUT, ">some_file" );
+$restrict = sub {
+	my ( $worker, $entry ) = @_;
+	$entry->sequence( substr($entry->sequence(),$start,$length) );
+	if ( $asFasta ) {
+		print $OUT ">".$entry->name()."\n".$entry->sequence()."\n";
+	}else {
+		$entry->quality( substr($entry->quality(),$start,$length) );
+		$entry->write($OUT);
+	}
+	$entry->clear();
+};
+
+$fastqObj->filter_file( $restrict, <fastq file> );
+
+close ( $OUT );
 
 =cut
 
 sub filter_file {
-	my ( $self, $fname, $filter ) = @_;
+	my ( $self, $function, $fname ) = @_;
 	my $file = $self->open_file($fname);
-	while ( <$file> ) {
-		chomp($_);
-		&{$filter}( $self, $_ );
+	my ($line);
+	while (1) {
+		$line = $self->read_file_line($file);
+		last unless ($line);
+		$line = $self->fastq_line( $line, 0 );
+		next unless ($line);
+		&{$function}( $self, $line );
 	}
-	close ( $file);
+	close($file);
 	return $self;
 }
-
 
 =head2 filter_multiple_files ($function, @files )
 
@@ -116,21 +132,48 @@ this function iterates over several fastq files (no GLOB just the filename!).
 It will apply the function $function on n total fastq entries only:
 &{$function}( @fastq_entries )
 
+
+=head3 example usage
+
+taken from Cropmium_Single_Cell_Perl package SplitToCells.pl script:
+
+my $func = sub{
+	my ($fastqfile, @entries) = @_;## f1, f2, i1
+	
+	my $cellid = "S_". $entries[2]->sequence()."_C_". substr($entries[1]->sequence,0,$options->{'cell_barcode_length'});
+	my $UMI_tag = substr($entries[1]->sequence,$options->{'cell_barcode_length'});
+	$counter->{$cellid} ++;
+	$entries[0]->Add_UMI_Tag($cellid."_".$UMI_tag);
+	$entries[0]->write( $OUT );	
+	
+	for ( my $i = 0 ; $i < @entries ; $i++ ) {
+		$entries[$i]->clear();
+	}
+};
+
+my $worker = stefans_libs::FastqFile->new();
+
+
+$worker->filter_multiple_files(
+	$func, $R2, $R1, $I1
+);
+
 =cut
 
 sub filter_multiple_files {
-	my ($self, $function, @files ) = @_;
-	my @objects = map{ $self->open_file($_) } @files;
-	my ( @lines );
-	while ( 1 ) {
+	my ( $self, $function, @files ) = @_;
+	my @objects = map { $self->open_file($_) } @files;
+	my (@lines);
+	while (1) {
 		@lines = map { $self->read_file_line($_) } @objects;
-		last unless ($lines[0]);
-		for (my $i = 0; $i < @lines; $i ++) {
-			$lines[$i] = $self->fastq_line($lines[$i],$i);
+		last unless ( $lines[0] );
+		for ( my $i = 0 ; $i < @lines ; $i++ ) {
+			$lines[$i] = $self->fastq_line( $lines[$i], $i );
 		}
-		next unless ($lines[0]);
+		next unless ( $lines[0] );
 		&{$function}( $self, @lines );
 	}
+	map { close($_) } @objects;
 	return $self;
 }
 
@@ -141,21 +184,22 @@ sub filter_multiple_files {
 =cut
 
 sub read_file_line {
-  my ( $self, $fh) = @_;
-  if ($fh and my $line = <$fh>) {
-  	return $line
-  }
-  return undef;
+	my ( $self, $fh ) = @_;
+	if ( $fh and my $line = <$fh> ) {
+		return $line;
+	}
+	return undef;
 }
 
-sub fastq_line{
+sub fastq_line {
 	my ( $self, $line, $id ) = @_;
 	$id ||= 0;
 	$self->{fastq_entry} ||= [];
-	@{$self->{fastq_entry}}[$id] ||= stefans_libs::FastqFile::FastqEntry->new();
-	@{$self->{fastq_entry}}[$id]->Add( $line );
-	if ( @{$self->{fastq_entry}}[$id]->is_filled() ){
-		return @{$self->{fastq_entry}}[$id];
+	@{ $self->{fastq_entry} }[$id] ||=
+	  stefans_libs::FastqFile::FastqEntry->new();
+	@{ $self->{fastq_entry} }[$id]->Add($line);
+	if ( @{ $self->{fastq_entry} }[$id]->is_filled() ) {
+		return @{ $self->{fastq_entry} }[$id];
 	}
 	return undef;
 }
@@ -163,23 +207,22 @@ sub fastq_line{
 sub exclude_read {
 	my ( $self, $fastqfile, $str, $outfile ) = @_;
 	my $OUT;
-	open ( $OUT, ">$outfile" ) or die "I could not create the outfile $outfile\n $!\n";
+	open( $OUT, ">$outfile" )
+	  or die "I could not create the outfile $outfile\n $!\n";
 	my $function = sub {
-		my $tmp = $self->fastq_line($_);
-		if ( defined $tmp ) {
-			if ( $tmp->sequence() eq $str){
-				$self->{'filtered'} ++;
-				$tmp->clear();
-				return;
-			}
-			$self->{'OK'} ++;
-			$tmp->write( $OUT );
-			$tmp->clear();
+		my ( $worker, $entry ) = @_;
+		if ( $entry->sequence() eq $str ) {
+			$worker->{'filtered'}++;
+			$entry->clear();
+			return;
 		}
+		$self->{'OK'}++;
+		$entry->write($OUT);
+		$entry->clear();
 	};
 	$self->{'OK'} = $self->{'filtered'} = 0;
-	$self->filter_file($fastqfile, $function );
-	close ( $OUT );
+	$self->filter_file( $function, $fastqfile );
+	close($OUT);
 	print "$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
 	return $self;
 }
@@ -195,89 +238,93 @@ re-implement this function if your read example differs from the here used one.
 
 =cut
 
-sub extract_barcode{
+sub extract_barcode {
 	my ( $self, $file, $adapter, $sample_barcode, $startingPos, $outfile ) = @_;
 	my $OUT;
-	open ( $OUT, ">$outfile" ) or die "I could not create the outfile $outfile\n $!\n";
+	open( $OUT, ">$outfile" )
+	  or die "I could not create the outfile $outfile\n $!\n";
 	$startingPos ||= 1;
 	my $pattern = "(...)$sample_barcode(..)(.+)";
 
 	#warn $pattern."\n\n";
-	
+
 	sub overlap {
-    my ($str1, $str2) = @_;
+		my ( $str1, $str2 ) = @_;
 
-    # Equalize Lengths
-    if (length $str1 < length $str2) {
-        $str2 = substr $str2, 0, length($str1);
-    } elsif (length $str1 > length $str2) {
-        $str1 = substr $str1, length($str1) - length($str2);
-    }
+		# Equalize Lengths
+		if ( length $str1 < length $str2 ) {
+			$str2 = substr $str2, 0, length($str1);
+		}
+		elsif ( length $str1 > length $str2 ) {
+			$str1 = substr $str1, length($str1) - length($str2);
+		}
 
-    # Reduce until match found
-    while ($str1 ne $str2) {
-        substr $str1, 0, 1, '';
-        chop $str2;
-    }
+		# Reduce until match found
+		while ( $str1 ne $str2 ) {
+			substr $str1, 0, 1, '';
+			chop $str2;
+		}
 
-   	 return $str1;
+		return $str1;
 	}
 	my $function = sub {
-		my $tmp = $self->fastq_line($_);
+		my ( $worker, $entry ) = @_;
 		my $seq;
 		my $overlap;
 		my $add;
-		if ( defined $tmp ) {
-			if ( $tmp->sequence() =~ m/$pattern/ and  $-[1] < $startingPos ){
-				$self->{'OK'} ++;
-				$add = ":$1$2";
-				$seq = $3;
-				$overlap = &overlap( $seq, $adapter );
-				if ( length($overlap) > 4 ) {
-					$seq =~ s/$overlap$//;
-					$add = ":AD".length($overlap).$add;
-				}
-				my @tt = split(" ", $tmp->name());
-				$tmp->name( $tt[0]."$add ".$tt[1] );
-				$tmp->sequence() =~ m/$seq/;
-				$tmp->quality( substr( $tmp->quality(), $-[0], $+[0]- $-[0] ) );
-				$tmp->sequence( $seq );
-				$tmp -> write( $OUT );
-				$tmp -> clear();
-			}else {
-				$self->{'filtered'} ++;
-				$tmp -> clear();
+		if ( $entry->sequence() =~ m/$pattern/ and $-[1] < $startingPos ) {
+			$self->{'OK'}++;
+			$add     = ":$1$2";
+			$seq     = $3;
+			$overlap = &overlap( $seq, $adapter );
+			if ( length($overlap) > 4 ) {
+				$seq =~ s/$overlap$//;
+				$add = ":AD" . length($overlap) . $add;
 			}
+			my @tt = split( " ", $entry->name() );
+			$entry->name( $tt[0] . "$add " . $tt[1] );
+			$entry->sequence() =~ m/$seq/;
+			$entry->quality(
+				substr( $entry->quality(), $-[0], $+[0] - $-[0] ) );
+			$entry->sequence($seq);
+			$entry->write($OUT);
+			$entry->clear();
 		}
+		else {
+			$self->{'filtered'}++;
+			$entry->clear();
+		}
+
 	};
 	$self->{'OK'} = $self->{'filtered'} = 0;
-	$self->filter_file($file, $function );
-	close ( $OUT );
-	print "$sample_barcode:$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
+	$self->filter_file( $function, $file );
+	close($OUT);
+	print
+"$sample_barcode:$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
 	return $self;
 }
 
 sub select_4_str {
-	my ( $self, $file, $str, $where, $outfile) =@_;
-	$where ||=  0;
+	my ( $self, $file, $str, $where, $outfile ) = @_;
+	$where ||= 0;
 	my $OUT;
-	open ( $OUT, ">$outfile" ) or die "I could not create the outfile $outfile\n $!\n";
+	open( $OUT, ">$outfile" )
+	  or die "I could not create the outfile $outfile\n $!\n";
 	my $function = sub {
-		my $tmp = $self->fastq_line($_);
-		if ( defined $tmp ) {
-			if ( @{$tmp->{'data'}}[$where] =~ m/$str/ ){
-				$self->{'OK'} ++;
-				$tmp->write($OUT);
-				$tmp -> clear();
-			}else {
-				$self->{'filtered'} ++;
-				$tmp -> clear();
-			}
+		my ( $worker, $entry ) = @_;
+		if ( @{ $entry->{'data'} }[$where] =~ m/$str/ ) {
+			$worker->{'OK'}++;
+			$entry->write($OUT);
+			$entry->clear();
+		}
+		else {
+			$worker->{'filtered'}++;
+			$entry->clear();
 		}
 	};
 	$self->{'OK'} = $self->{'filtered'} = 0;
-	$self->filter_file($file, $function );
-	close ( $OUT );
+	$self->filter_file( $function, $file );
+	close($OUT);
 	print "$self->{'OK'} OK fastq entries, $self->{'filtered'} filtered.\n";
 	return $self;
 }
