@@ -17,7 +17,7 @@ author 'Stefan Lang <Stefan.Lang@med.lu.se>';
 #requires 'stefans_libs-GenomeDB' => 0;
 requires 'File::Copy' => 0;
 requires 'Parallel::ForkManager' => 0;
-
+requires 'stefans_libs::BAMfile' => 0;
 
 sub install_scripts_in_path {
 	my ( $dir ) = @_;

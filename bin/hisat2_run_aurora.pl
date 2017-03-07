@@ -169,9 +169,10 @@ $task_description .= " -debug"          if ($debug);
 
 ## Do whatever you want!
 
-open ( LOG, ">$bigwigTracks.log" ) or die "I could not create the log file '$bigwigTracks.log'\n$!\n";
+open( LOG, ">$bigwigTracks.log" )
+  or die "I could not create the log file '$bigwigTracks.log'\n$!\n";
 print LOG $task_description;
-close (LOG);
+close(LOG);
 
 my ( $cmd, $fm, @big_wig_urls, $tmp, $this_outfile );
 
@@ -185,9 +186,11 @@ foreach (qw(n N t mem)) {
 
 $fm = root->filemap( $files[0] );
 
-$SLURM -> {'SLURM_modules'} = [	'icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 HISAT2/2.0.4 BEDTools/2.25.0 Java/1.8.0_92 picard/2.8.2',
+$SLURM->{'SLURM_modules'} = [
+	'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150 HISAT2/2.0.4',
+	'BEDTools/2.25.0', 'Java/1.8.0_72', 'picard/2.8.2', 'ucsc-tools/R2016a',
 	stefans_libs::scripts::BAM->SLURUM_load(),
-  ];
+];
 
 my $BAM = stefans_libs::scripts::BAM->new($options);
 
@@ -199,12 +202,12 @@ while ( scalar(@files) ) {
 	  ;    ## the files will be depleted by the create_call function!
 	$cmd = &chk_cmd( &create_call() );
 	$cmd .= &chk_cmd( $BAM->convert_sam_2_sorted_bam($this_outfile) );
-	$cmd .= &chk_cmd( create_picard_call($this_outfile) );
+	$cmd .= &chk_cmd( create_picard_call($this_outfile) ) if ( $dropDuplicates );
 	$cmd .=
 	  &chk_cmd(
 		$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) );
 
-	#$cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage));
+	$cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage));
 	$tmp = $SLURM->run( $cmd, $fm, $this_outfile );
 	$submitted++ if ( $tmp == 1 );
 	if ( $submitted >= $max_jobs ) {
