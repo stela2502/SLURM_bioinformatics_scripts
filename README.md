@@ -7,7 +7,7 @@ As you most likely run the scripts on a server you are not admin of you might co
 
 In addition you need git:
 
-You will need my base libs which you can get from <a href='https://github.com/stela2502/Stefans_Lib_Esentials'>my Stefans_Lib_Esentials repository</a>.
+You will need my base libs which you can get from <a href='https://github.com/stela2502/Stefans_Lib_Esentials'>my Stefans_Lib_Esentials repository</a>. And my stefans_libs::BAMfile from <a href='https://github.com/stela2502/stefans_libs-BAMfile'>the respective guthub page</a>.
 
 Clone this repository and use the 
 perl Makefile.PL
