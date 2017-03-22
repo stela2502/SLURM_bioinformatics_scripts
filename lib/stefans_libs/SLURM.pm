@@ -57,6 +57,7 @@ sub new{
 
 	my $self = {
 		'SLURM_modules' => [],
+		'sub_SLURMS' => [],
 	};
 
 	$self->{'debug'} ||= 0;
@@ -76,6 +77,13 @@ sub new{
 
 	$self->clean_slurm_options( $options );
   	return $self;
+}
+
+sub define_Subscript {
+	my ( $self ) = @_;
+	my $sub = ref($self)->new();
+	push( @{$self->{'sub_SLURMS'}}, $sub);
+	return $sub;
 }
 
 sub options {
@@ -191,7 +199,30 @@ sub script {
 	if ( @{$self->{'SLURM_modules'}} ) {
 		$ret .= "\n". $self->load_SLURM_modules();
 	}
-	$ret .= "\n$cmd\n";
+	if ( ref($cmd) eq "ARRAY" ) {
+		$ret .= "\n".shift(@$cmd);
+		for (my $i = 0; $i < @$cmd; $i ++ ){
+			$ret .= @{$self->{'sub_SLURMS'}}[$i]->subscript( @$cmd[$i]);
+		}
+	}else {
+		$ret .= "\n$cmd\n";
+	}
+	return $ret;
+}
+=head2 subscript ( $cmd )
+
+Create only the module loads and the cmd parts of the script.
+This function is used internally to create scripts that need different sets of modules loaded at different timepoints.
+
+=cut
+
+sub subscript {
+	my ( $self, $cmd ) = @_;
+	my $ret = '';
+	if ( @{$self->{'SLURM_modules'}} ) {
+		$ret .=  $self->load_SLURM_modules();
+	}
+	$ret .= "\n".$cmd."\n";
 	return $ret;
 }
 

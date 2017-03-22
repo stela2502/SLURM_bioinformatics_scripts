@@ -22,7 +22,9 @@ $cmd =
   . "-options n 1 N 1 t '00:02:00' p 2 A 'snic2016-4-13' "
   . "-genome $plugin_path/data/hg38/hg38 "    ## does not even exist
   . "-coverage  $plugin_path/data/fake_hg38.chrom.sizes.txt "
-  . "-bigwigTracks $plugin_path/data/output/BigWigTrackInfo.txt  -debug > /dev/null 2> /dev/null";
+  . "-bigwigTracks $plugin_path/data/output/BigWigTrackInfo.txt  -debug "
+  . "> /dev/null 2> /dev/null"
+  ;
 print "the command:\n$cmd\n";
 system($cmd );
 
@@ -44,15 +46,18 @@ $exp = [
 	'#SBATCH -o test_empty.fastq%j.out',
 	'#SBATCH -e test_empty.fastq%j.err',
 	"module purge",
-	 'module load icc/2015.3.187-GNU-4.9.3-2.25 impi/5.0.3.048 Bowtie/1.1.2 SAMtools/0.1.20 ',
+	 'module load icc/2015.3.187-GNU-4.9.3-2.25 impi/5.0.3.048 Bowtie/1.1.2 ',
 "bowtie  -p 2 --sam $plugin_path/data/hg38/hg38 '$plugin_path/data/test_empty.fastq.gz' > $plugin_path/data/bowtie/test_empty.fastq_bowtie.sam",
+"module purge",
+'module load icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 SAMtools/1.3.1 BEDTools/2.25.0 ucsc-tools/R2016a ',
 "samtools view -Sb  $plugin_path/data/bowtie/test_empty.fastq_bowtie.sam | samtools sort -@ 1 -o $plugin_path/data/bowtie/test_empty.fastq_bowtie.sorted.bam -",
 "if  [ -f $plugin_path/data/bowtie/test_empty.fastq_bowtie.sorted.bam ]&&[ -s $plugin_path/data/bowtie/test_empty.fastq_bowtie.sorted.bam ]; then",
 "rm -f $plugin_path/data/bowtie/test_empty.fastq_bowtie.sam",
 	'fi','',
-	"#bedtools genomecov -bg -split -ibam $plugin_path/data/bowtie/test_empty.fastq_bowtie.sorted.bam -g $plugin_path/data/fake_hg38.chrom.sizes.txt | sort -k1,1 -k2,2n > $plugin_path/data/bowtie/test_empty.fastq_bowtie.bedGraph",
-	"#polish_bed_like_files.pl -bed_file $plugin_path/data/bowtie/test_empty.fastq_bowtie.bedGraph",
-	"#bedGraphToBigWig $plugin_path/data/bowtie/test_empty.fastq_bowtie.bedGraph $plugin_path/data/fake_hg38.chrom.sizes.txt $plugin_path/data/bowtie/test_empty.fastq_bowtie.bw"
+	"bedtools genomecov -bg -split -ibam $plugin_path/data/bowtie/test_empty.fastq_bowtie.sorted.bam -g $plugin_path/data/fake_hg38.chrom.sizes.txt | sort -k1,1 -k2,2n > $plugin_path/data/bowtie/test_empty.fastq_bowtie.bedGraph",
+	'',"polish_bed_like_files.pl -bed_file $plugin_path/data/bowtie/test_empty.fastq_bowtie.bedGraph",
+	"bedGraphToBigWig $plugin_path/data/bowtie/test_empty.fastq_bowtie.bedGraph $plugin_path/data/fake_hg38.chrom.sizes.txt $plugin_path/data/bowtie/test_empty.fastq_bowtie.bw"
+	,''
 ];
 
 is_deeply( $value, $exp, "The script contains the right entries" );
@@ -88,7 +93,7 @@ system($cmd );
 open( IN, "<$plugin_path/data/test_empty.fastq.sh" );
 $value = [ map { chomp; $_ } <IN> ];
 close(IN);
-foreach ( 11..14) {
+foreach ( 13..16) {
 	@$exp[$_] = "#@$exp[$_]";
 }
 is_deeply( $value, $exp, "The script contains the right entries ( .sorted.bam existing)" );
@@ -100,8 +105,9 @@ system($cmd );
 open( IN, "<$plugin_path/data/test_empty.fastq.sh" );
 $value = [ map { chomp; $_ } <IN> ];
 close(IN);
-@$exp[16] = "#@$exp[16]";
-
+foreach ( 18 ) {
+	@$exp[$_] = "#@$exp[$_]";
+}
 
 is_deeply( $value, $exp, "The script contains the right entries ( .bedGraph existing)" );
 
@@ -112,7 +118,7 @@ system($cmd );
 open( IN, "<$plugin_path/data/test_empty.fastq.sh" );
 $value = [ map { chomp; $_ } <IN> ];
 close(IN);
-foreach ( 17,18 ) {
+foreach ( 20,21 ) {
 	@$exp[$_] = "#@$exp[$_]";
 }
 is_deeply( $value, $exp, "The script contains the right entries ( .bw existing)" );
