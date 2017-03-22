@@ -80,18 +80,35 @@ $exp = [
 	'#SBATCH -J AbsolutelyEmpty',
 	'#SBATCH -o AbsolutelyEmpty%j.out',
 	'#SBATCH -e AbsolutelyEmpty%j.err',
-	"hisat2 -x $plugin_path/data --sra-acc $plugin_path/data/AbsolutelyEmpty.sra --threads 10 --add-chrname > $outpath/AbsolutelyEmpty_hisat.sam",
-"samtools view -Sb  $outpath/AbsolutelyEmpty_hisat.sam | samtools sort -@ 9 -o $outpath/AbsolutelyEmpty_hisat.sorted.bam -",
-"if  [ -f $outpath/AbsolutelyEmpty_hisat.sorted.bam ]&&[ -s $outpath/AbsolutelyEmpty_hisat.sorted.bam ]; then",
-"rm -f $outpath/AbsolutelyEmpty_hisat.sam",
+	'module load icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 SAMtools/1.3.1 '
+		.'HISAT2/2.0.4 BEDTools/2.25.0 Java/1.8.0_92 picard/2.8.2.1 ucsc-tools/R2016a ',
+	"hisat2  -x $plugin_path/data --sra-acc $plugin_path/data/AbsolutelyEmpty.sra --threads 10 "
+		."--add-chrname > \$SNIC_TMP/AbsolutelyEmpty_hisat.sam",
+	"samtools view -Sb  \$SNIC_TMP/AbsolutelyEmpty_hisat.sam | samtools sort -@ 9 -o \$SNIC_TMP/AbsolutelyEmpty_hisat.sorted.bam -",
+	"if  [ -f \$SNIC_TMP/AbsolutelyEmpty_hisat.sorted.bam ]&&[ -s \$SNIC_TMP/AbsolutelyEmpty_hisat.sorted.bam ]; then",
+	"rm -f \$SNIC_TMP/AbsolutelyEmpty_hisat.sam",
 	'fi',
-"bedtools genomecov -bg -split -ibam $outpath/AbsolutelyEmpty_hisat.sorted.bam -g $plugin_path/data/AbsolutelyEmpty.chrlength |"
-  . " sort -k1,1 -k2,2n > $outpath/AbsolutelyEmpty_hisat.bedGraph",
-	''
+	"mv \$SNIC_TMP/AbsolutelyEmpty_hisat.sorted.bam $outpath/AbsolutelyEmpty_hisat.sorted.bam",
+	"bedtools genomecov -bg -split -ibam $outpath/AbsolutelyEmpty_hisat.sorted.bam -g $plugin_path/data/AbsolutelyEmpty.chrlength |"
+  		." sort -k1,1 -k2,2n > $outpath/AbsolutelyEmpty_hisat.bedGraph",
+  	"polish_bed_like_files.pl -bed_file $outpath/AbsolutelyEmpty_hisat.bedGraph",
+  	"bedGraphToBigWig $outpath/AbsolutelyEmpty_hisat.bedGraph $plugin_path/data/AbsolutelyEmpty.chrlength $outpath/AbsolutelyEmpty_hisat.bw",
+  	
+''
 ];
 is_deeply( \@values, $exp, "right script for mapping one sra file" );
 
 #print "\$exp = ".root->print_perl_var_def($value ).";\n";
+
+
+
+sub hostname {
+	open ( H, "hostname |" ) or die "I could not run the hostnale command\n$!\n";
+	my $ret = join("",<H> );
+	close ( H );
+	$ret =~ s/\n//g;
+	return $ret;
+}
 
 sub read_file {
 	my $file    = shift;

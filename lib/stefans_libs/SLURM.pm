@@ -204,19 +204,25 @@ sub load_R_x11 {
 
 sub load_SLURM_modules {
 	my ( $self, @modules ) = @_;
-	system("bash -c 'module list 2> /tmp/modulelist.tmp'" );
-	open ( IN, "</tmp/modulelist.tmp" ) or die "could not open the tmp module list (/tmp/modulelist.tmp)\n$!\n";
 	my $loaded;
-	foreach ( <IN> ) {
-		next if ( $_ =~ m/Currently Loaded Modules/);
-		chomp($_);
-		$_ =~s/\s+\d+\)\s+/;/g;
-		map{ if ( $_ =~ m/\w/ ) {$loaded -> {$_} = 1 } } split(";" ,$_);
-	}
-	close ( IN );
-	unlink( "/tmp/modulelist.tmp" );
+	if ( !$self->{'purge'} ) {
+		system("bash -c 'module list 2> /tmp/modulelist.tmp'" );
+		open ( IN, "</tmp/modulelist.tmp" ) or die "could not open the tmp module list (/tmp/modulelist.tmp)\n$!\n";
+		
+		foreach ( <IN> ) {
+			next if ( $_ =~ m/Currently Loaded Modules/);
+			chomp($_);
+			$_ =~s/\s+\d+\)\s+/;/g;
+			map{ if ( $_ =~ m/\w/ ) {$loaded -> {$_} = 1 } } split(";" ,$_);
+		}
+		close ( IN );
+		unlink( "/tmp/modulelist.tmp" );
+		print "Hope there is some loaded module?: ".root->print_perl_var_def( $loaded ) if ( $self->{debug});
 	
-	print "Hope there is some loaded module?: ".root->print_perl_var_def( $loaded ) if ( $self->{debug});
+	}else {
+		$loaded = {};
+	}
+	
 	
 	my $modules_to_load = '';
 	if ( @{$self->{'SLURM_modules'}}) {
@@ -226,9 +232,12 @@ sub load_SLURM_modules {
 		$modules_to_load .= "$_ " unless ( $loaded->{$_});
 	}
 	if ($modules_to_load =~m/\w/ ) {
-		return "module load $modules_to_load";
+		$modules_to_load = "module load $modules_to_load";
 	}
-	return "";	
+	if ( $self->{'purge'} ) {
+		return "module purge\n$modules_to_load";
+	}
+	return $modules_to_load;	
 }
 
 sub clean_slurm_options {
