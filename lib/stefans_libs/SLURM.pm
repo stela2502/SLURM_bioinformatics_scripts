@@ -168,7 +168,7 @@ Creates a script file string like that:
 sub script {
 	my ( $self, $cmd, $name ) = @_;
 	&check ( { cmd=>$cmd, name=> $name}, 'cmd', 'name' );
-	my @o = qw( n N t A);
+	my @o = qw( n N t ); # A); # A could be optional - make the user responsible again!
 	$self->check( @o );
 	my $ret = '#! /bin/bash'."\n";
 	if ( $self->{'partitition'}) {
