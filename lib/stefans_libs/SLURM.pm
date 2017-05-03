@@ -57,6 +57,7 @@ sub new{
 
 	my $self = {
 		'SLURM_modules' => [],
+		'sub_SLURMS' => [],
 	};
 
 	$self->{'debug'} ||= 0;
@@ -76,6 +77,13 @@ sub new{
 
 	$self->clean_slurm_options( $options );
   	return $self;
+}
+
+sub define_Subscript {
+	my ( $self ) = @_;
+	my $sub = ref($self)->new();
+	push( @{$self->{'sub_SLURMS'}}, $sub);
+	return $sub;
 }
 
 sub options {
@@ -191,7 +199,30 @@ sub script {
 	if ( @{$self->{'SLURM_modules'}} ) {
 		$ret .= "\n". $self->load_SLURM_modules();
 	}
-	$ret .= "\n$cmd\n";
+	if ( ref($cmd) eq "ARRAY" ) {
+		$ret .= "\n".shift(@$cmd);
+		for (my $i = 0; $i < @$cmd; $i ++ ){
+			$ret .= @{$self->{'sub_SLURMS'}}[$i]->subscript( @$cmd[$i]);
+		}
+	}else {
+		$ret .= "\n$cmd\n";
+	}
+	return $ret;
+}
+=head2 subscript ( $cmd )
+
+Create only the module loads and the cmd parts of the script.
+This function is used internally to create scripts that need different sets of modules loaded at different timepoints.
+
+=cut
+
+sub subscript {
+	my ( $self, $cmd ) = @_;
+	my $ret = '';
+	if ( @{$self->{'SLURM_modules'}} ) {
+		$ret .=  $self->load_SLURM_modules();
+	}
+	$ret .= "\n".$cmd."\n";
 	return $ret;
 }
 
@@ -204,19 +235,25 @@ sub load_R_x11 {
 
 sub load_SLURM_modules {
 	my ( $self, @modules ) = @_;
-	system("bash -c 'module list 2> /tmp/modulelist.tmp'" );
-	open ( IN, "</tmp/modulelist.tmp" ) or die "could not open the tmp module list (/tmp/modulelist.tmp)\n$!\n";
 	my $loaded;
-	foreach ( <IN> ) {
-		next if ( $_ =~ m/Currently Loaded Modules/);
-		chomp($_);
-		$_ =~s/\s+\d+\)\s+/;/g;
-		map{ if ( $_ =~ m/\w/ ) {$loaded -> {$_} = 1 } } split(";" ,$_);
-	}
-	close ( IN );
-	unlink( "/tmp/modulelist.tmp" );
+	if ( !$self->{'purge'} ) {
+		system("bash -c 'module list 2> /tmp/modulelist.tmp'" );
+		open ( IN, "</tmp/modulelist.tmp" ) or die "could not open the tmp module list (/tmp/modulelist.tmp)\n$!\n";
+		
+		foreach ( <IN> ) {
+			next if ( $_ =~ m/Currently Loaded Modules/);
+			chomp($_);
+			$_ =~s/\s+\d+\)\s+/;/g;
+			map{ if ( $_ =~ m/\w/ ) {$loaded -> {$_} = 1 } } split(";" ,$_);
+		}
+		close ( IN );
+		unlink( "/tmp/modulelist.tmp" );
+		print "Hope there is some loaded module?: ".root->print_perl_var_def( $loaded ) if ( $self->{debug});
 	
-	print "Hope there is some loaded module?: ".root->print_perl_var_def( $loaded ) if ( $self->{debug});
+	}else {
+		$loaded = {};
+	}
+	
 	
 	my $modules_to_load = '';
 	if ( @{$self->{'SLURM_modules'}}) {
@@ -226,9 +263,12 @@ sub load_SLURM_modules {
 		$modules_to_load .= "$_ " unless ( $loaded->{$_});
 	}
 	if ($modules_to_load =~m/\w/ ) {
-		return "module load $modules_to_load";
+		$modules_to_load = "module load $modules_to_load";
 	}
-	return "";	
+	if ( $self->{'purge'} ) {
+		return "module purge\n$modules_to_load";
+	}
+	return $modules_to_load;	
 }
 
 sub clean_slurm_options {

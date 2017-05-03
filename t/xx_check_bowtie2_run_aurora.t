@@ -43,6 +43,8 @@ $exp = [
 	'#SBATCH -J test_empty.fastq',
 	'#SBATCH -o test_empty.fastq%j.out',
 	'#SBATCH -e test_empty.fastq%j.err',
+	'module load icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150  Bowtie2/2.2.8 BEDTools/2.25.0 picard/2.8.2 ucsc-tools/R2016a '
+	.'icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 HISAT2/2.0.4 BEDTools/2.25.0 ucsc-tools/R2016a ',
 "bowtie2 -x $plugin_path/data/hg38/hg38  -p 2 -U '$plugin_path/data/test_empty.fastq.gz' -S $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sam",
 "samtools view -Sb  $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sam | samtools sort -@ 1 -o $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sorted.bam -",
 "if  [ -f $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sorted.bam ]&&[ -s $plugin_path/data/bowtie2/test_empty.fastq_bowtie2.sorted.bam ]; then",
@@ -75,7 +77,7 @@ open( IN, "<$plugin_path/data/test_empty.fastq.sh" );
 $value = [ map { chomp; $_ } <IN> ];
 close(IN);
 
-@$exp[8] = "#@$exp[8]";
+@$exp[9] = "#@$exp[9]";
 
 is_deeply( $value, $exp, "The script contains the right entries ( .sam existing)" );
 
@@ -87,7 +89,7 @@ system($cmd );
 open( IN, "<$plugin_path/data/test_empty.fastq.sh" );
 $value = [ map { chomp; $_ } <IN> ];
 close(IN);
-foreach ( 9..12) {
+foreach ( 10..13) {
 	@$exp[$_] = "#@$exp[$_]";
 }
 is_deeply( $value, $exp, "The script contains the right entries ( .sorted.bam existing)" );
@@ -99,7 +101,7 @@ system($cmd );
 open( IN, "<$plugin_path/data/test_empty.fastq.sh" );
 $value = [ map { chomp; $_ } <IN> ];
 close(IN);
-foreach ( 14 ) {
+foreach ( 15 ) {
 	@$exp[$_] = "#@$exp[$_]";
 }
 is_deeply( $value, $exp, "The script contains the right entries ( .bedGraph existing)" );
@@ -111,7 +113,7 @@ system($cmd );
 open( IN, "<$plugin_path/data/test_empty.fastq.sh" );
 $value = [ map { chomp; $_ } <IN> ];
 close(IN);
-foreach ( 15, 16 ) {
+foreach ( 16, 17 ) {
 	@$exp[$_] = "#@$exp[$_]";
 }
 is_deeply( $value, $exp, "The script contains the right entries ( .bw existing)" );

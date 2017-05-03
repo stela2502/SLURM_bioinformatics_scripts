@@ -12,3 +12,5 @@ output
 AbsolutelyEmpty.sh
 /HISAT2_OUT/
 /test_empty.fastq.sh
+/bowtie/
+/bowtie2/

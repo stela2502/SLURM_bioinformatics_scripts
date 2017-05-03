@@ -92,18 +92,35 @@ Returns the script + the final outfile.
 =cut
 
 sub convert_sam_2_sorted_bam {
-	my ($self, $fm) = @_;
+	my ($self, $fm, $final_path) = @_;
  	unless ( ref($fm) eq "HASH") {
- 		$fm = root->filemap( $fm );
+ 		if ( $fm =~m/^(\$\w*)\/(.*)$/ ) {
+ 			## oops the tmp file variable!
+ 			my $tmp = $1;
+ 			$fm = root->filemap( $2 );
+ 			$fm->{'path'} = $tmp;
+ 		}else {
+ 			$fm = root->filemap( $fm );
+ 		}
  	}
+ 	my $ret_file;
+ 	$final_path ||=$fm->{'path'};
 	my $f  = $fm->{'path'} . "/" . $fm->{'filename_core'};
+	my $final = $final_path."/".$fm->{'filename_core'};
+	unless ( $final eq  $f ){
+		$ret_file = "$final.sorted.bam";
+		$final = "mv $f.sorted.bam $final.sorted.bam";
+	}else {
+		$final = "";
+		$ret_file = "$f.sorted.bam";
+	}
 	return join("\n",
 		 "samtools view -Sb  $f.sam | samtools sort -\@ "
 		  . ( $self->{p} - 1 )
 		  . " -o $f.sorted.bam -",
 		"if  [ -f $f.sorted.bam ]&&[ -s $f.sorted.bam ]; then", "rm -f $f.sam",
-		"fi"
-	), "$f.sorted.bam";
+		"fi",$final
+	), $ret_file;
 }
 
 =head3 convert_sorted_bam_2_bigwig ( <sorted bam file>, <genome file for bedtools genomecov>)

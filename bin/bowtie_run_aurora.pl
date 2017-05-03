@@ -25,19 +25,20 @@ use stefans_libs::scripts::BAM;
 
 =head1  SYNOPSIS
 
-    bowtie2_run_aurora.pl
+    bowtie_run_aurora.pl
        -files     :a list of fastq or fastq.gz files   
        -options   :additional options in the format
                    key_1 value_1 key_2 value_2 ... key_n value_n
                    recommended: n 10 N 1 mem 4000M t '02:02:00' p 10
-       -genome    :the genome definition as used by bowtie2 -X
+       -genome    :the genome definition as used by bowtie -X
        -coverage  :the genome coverage file to create bigwig tracks
        -paired    :if you have paired data to map use this option and
                    give me the pired files one after the other
                    
        -bowtie_options:
                    All additional bowtie options as one string e.g.
-                        
+                   '-m 500 -v2 --best --strata'
+                   
        -bigwigTracks :If I have a coverage file I can create the 
                       bigwig tracks information and stoire it there
 
@@ -54,9 +55,9 @@ use stefans_libs::scripts::BAM;
   
 =head1 DESCRIPTION
 
-  This script takes a  list of fastq or fastq.gz files, created a folder named bowtie2 below these files and outputs the processed data there. Use -debug to not start the SBIN script.
+  This script takes a  list of fastq or fastq.gz files, created a folder named bowtie below these files and outputs the processed data there. Use -debug to not start the SBIN script.
 
-  To get further help use 'bowtie2_run_aurora.pl -help' at the comman line.
+  To get further help use 'bowtie_run_aurora.pl -help' at the comman line.
 
 =cut
 
@@ -69,18 +70,19 @@ my $plugin_path = "$FindBin::Bin";
 my $VERSION = 'v1.0';
 
 my (
-	$help,    $debug,  $database, @files,    $options,$bowtie_options,
-	@options, $genome, $paired,   $coverage, $bigwigTracks
+	$help,    $debug,          $database, @files,
+	$options, $bowtie_options, @options,  $genome,
+	$paired,  $coverage,       $bigwigTracks
 );
 
 Getopt::Long::GetOptions(
-	"-files=s{,}"     => \@files,
-	"-options=s{,}"   => \@options,
-	"-genome=s"       => \$genome,
-	"-coverage=s"     => \$coverage,
-	"-paired"         => \$paired,
-	"-bowie_options=s" => \$bowtie_options,
-	"-bigwigTracks=s" => \$bigwigTracks,
+	"-files=s{,}"       => \@files,
+	"-options=s{,}"     => \@options,
+	"-genome=s"         => \$genome,
+	"-coverage=s"       => \$coverage,
+	"-paired"           => \$paired,
+	"-bigwigTracks=s"   => \$bigwigTracks,
+	"-bowtie_options=s" => \$bowtie_options,
 
 	"-help"  => \$help,
 	"-debug" => \$debug
@@ -89,7 +91,6 @@ Getopt::Long::GetOptions(
 my $warn  = '';
 my $error = '';
 
-$bowtie_options ||= '';
 unless ( defined $files[0] ) {
 	$error .= "the cmd line switch -files is undefined!\n";
 }
@@ -106,7 +107,8 @@ else {
 		  "the cmd line switch -genome '$tmp->{'path'}'\npath not found!\n";
 	}
 }
-$coverage ||= '';
+$bowtie_options ||= '';
+$coverage       ||= '';
 unless ( -f $coverage ) {
 	$warn .=
 "bigwig files can not be created unless you give me the right genome coverage file (-coverage)\n";
@@ -142,7 +144,7 @@ sub helpString {
 
 my ($task_description);
 
-$task_description .= 'perl ' . $plugin_path . '/bowtie2_run_aurora.pl';
+$task_description .= 'perl ' . $plugin_path . '/bowtie_run_aurora.pl';
 $task_description .= '       -files "' . join( '" "', @files ) . '"'
   if ( defined $files[0] );
 $task_description .= '       -options "' . join( '" "', @options ) . '"'
@@ -152,12 +154,14 @@ $task_description .= " -paired"               if ($paired);
 $task_description .= " -coverage '$coverage'" if ( -f $coverage );
 $task_description .= " -bigwigTracks '$bigwigTracks'"
   if ( defined $bigwigTracks );
-$task_description .= " -bowtie_options '$bowtie_options'" if ( $bowtie_options =~ m/\w/ );
+$task_description .= " -bowtie_options '$bowtie_options'"
+  if ( $bowtie_options =~ m/\w/ );
 
 for ( my $i = 0 ; $i < @options ; $i += 2 ) {
 	$options[ $i + 1 ] =~ s/\n/ /g;
 	$options->{ $options[$i] } = $options[ $i + 1 ];
 }
+
 #print "\$exp =  " . root->print_perl_var_def($options) . ";\n";
 ## Do whatever you want!
 my ( $cmd, $fm, $this_cmd, @big_wig_urls, $tmp, $this_outfile );
@@ -179,18 +183,26 @@ my $BAM = stefans_libs::scripts::BAM->new($options);
 ##### load the modules that are needed first!
 ## therefore I need to create a script file and run that using bash
 $fm = root->filemap( $files[0] );
+$SLURM->{'purge'} = 1;
+$SLURM->{'SLURM_modules'} =
+  [ 'icc/2015.3.187-GNU-4.9.3-2.25', 'impi/5.0.3.048 Bowtie/1.1.2' ];
 
-$SLURM->{'SLURM_modules'} = [
-'GCC/4.9.3-2.25',  'OpenMPI/1.10.2',
-    'GCC/4.9.3-2.25', 'OpenMPI/1.10.2', 'Bowtie2/2.2.8',
-	'BEDTools/2.25.0', 'Java/1.8.0_72', 'picard/2.8.2', 'ucsc-tools/R2016a', 'SAMtools/1.3.1-HTSlib-1.3.1'
+$tmp                    = $SLURM->define_Subscript();
+$tmp->{'purge'}         = 1;
+$tmp->{'SLURM_modules'} = [
+	'GCC/4.9.3-2.25',  'OpenMPI/1.10.2',
+#	'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150',
+	'SAMtools/1.3.1',                'BEDTools/2.25.0',
+#	'Java/1.8.0_92',                 'picard/2.8.2.1',
+	'ucsc-tools/R2016a',
 ];
 
 my $files_modified = 0;
-$cmd = "bowtie2 $bowtie_options -x $genome ";
+$cmd = "bowtie $bowtie_options";
 foreach my $key ( keys %$options ) {
 	$cmd .= " -$key $options->{$key}";
 }
+$cmd .= " --sam $genome ";
 for ( my $i = 0 ; $i < @files ; $i++ ) {
 	if ( $files[$i] =~ m/\s/ ) {
 		$tmp = $files[$i];
@@ -208,56 +220,74 @@ Carp::confess("Files were moved/renamed - please re-run!\n")
 
 if ($paired) {
 	for ( my $i = 0 ; $i < @files ; $i += 2 ) {
+		my @cmds;
 		$this_cmd = $cmd;
 		$fm       = root->filemap( $files[$i] );
 		$this_outfile =
-		  "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam";
-		unless ( -d $fm->{'path'} . "/bowtie2" ) {
-			mkdir( $fm->{'path'} . "/bowtie2" );
+		  "$fm->{'path'}/bowtie/$fm->{'filename_core'}_bowtie.sam";
+		unless ( -d $fm->{'path'} . "/bowtie" ) {
+			mkdir( $fm->{'path'} . "/bowtie" );
 		}
-		$this_cmd .= " -1 '$files[$i]' -2 '" . $files[ $i + 1 ] . "'";
-		$this_cmd .= " -S $this_outfile";
+		$this_cmd .= "-1 '$files[$i]' -2 '" . $files[ $i + 1 ] . "'";
+		$this_cmd .= " > $this_outfile";
 		$this_cmd = $SLURM->check_4_outfile( $this_cmd,
-			"$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sorted.bam" );
+			"$fm->{'path'}/bowtie/$fm->{'filename_core'}_bowtie.sorted.bam" );
 		$this_cmd = $SLURM->check_4_outfile( $this_cmd,
-			"$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam" );
-		$this_cmd .= &chk_cmd($BAM->convert_sam_2_sorted_bam($this_outfile));
-		$this_cmd .= &chk_cmd($BAM->convert_sorted_bam_2_bedGraph($this_outfile,$coverage));
-		$this_cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage));
-		$SLURM->run( $this_cmd, $fm, $this_outfile );
+			"$fm->{'path'}/bowtie/$fm->{'filename_core'}_bowtie.sam" );
+		$cmds[0] = $this_cmd;
+
+		$this_cmd = &chk_cmd( $BAM->convert_sam_2_sorted_bam($this_outfile) )
+		  ;    ## killing the bowtie call!!
+		$this_cmd .=
+		  &chk_cmd(
+			$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) );
+		$this_cmd .=
+		  &chk_cmd(
+			$BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) );
+		$cmds[1] = $this_cmd;
+		$SLURM->run( \@cmds, $fm );
 	}
 }
 else {
 	for ( my $i = 0 ; $i < @files ; $i++ ) {
 		$this_cmd = $cmd;
-		$fm       = root->filemap( $files[$i] );
+		my @cmds;
+		$fm = root->filemap( $files[$i] );
 		$this_outfile =
-		  "$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam";
-		unless ( -d $fm->{'path'} . "/bowtie2" ) {
-			mkdir( $fm->{'path'} . "/bowtie2" );
+		  "$fm->{'path'}/bowtie/$fm->{'filename_core'}_bowtie.sam";
+		unless ( -d $fm->{'path'} . "/bowtie" ) {
+			mkdir( $fm->{'path'} . "/bowtie" );
 		}
-		$this_cmd .= " -U '$files[$i]'";
+		$this_cmd .= "'$files[$i]'";
 		$this_cmd .=
-		  " -S $fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam";
+		  " > $fm->{'path'}/bowtie/$fm->{'filename_core'}_bowtie.sam";
 		$this_cmd = &chk_cmd( $this_cmd,
-			"$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sorted.bam" );
+			"$fm->{'path'}/bowtie/$fm->{'filename_core'}_bowtie.sorted.bam" );
 		$this_cmd = $SLURM->check_4_outfile( $this_cmd,
-			"$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam" );
-		$this_cmd .= &chk_cmd(
-			$BAM->convert_sam_2_sorted_bam("$fm->{'path'}/bowtie2/$fm->{'filename_core'}_bowtie2.sam")
-		)."\n";
-		$this_cmd .= &chk_cmd($BAM->convert_sorted_bam_2_bedGraph($this_outfile,$coverage));
-		$this_cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage));
-		$SLURM->run( $this_cmd, $fm );
+			"$fm->{'path'}/bowtie/$fm->{'filename_core'}_bowtie.sam" );
+		$cmds[0] = $this_cmd;
+		$this_cmd = &chk_cmd(
+			$BAM->convert_sam_2_sorted_bam(
+				"$fm->{'path'}/bowtie/$fm->{'filename_core'}_bowtie.sam")
+		) . "\n";
+		$this_cmd .=
+		  &chk_cmd(
+			$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) )
+		  . "\n";
+		$this_cmd .=
+		  &chk_cmd(
+			$BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) );
+		$cmds[1] = $this_cmd;
+		$SLURM->run( \@cmds, $fm );
 	}
 }
 
-if ( @{$BAM->{'big_wig_urls'}} > 0 ) {
+if ( @{ $BAM->{'big_wig_urls'} } > 0 ) {
 	open( OUT, ">$bigwigTracks" )
 	  or die "I could not create the bigwig outfile '$bigwigTracks'\n$!\n";
-	print OUT join( "\n", @{$BAM->{'big_wig_urls'}} );
+	print OUT join( "\n", @{ $BAM->{'big_wig_urls'} } );
 	close(OUT);
-	print join( "\n", @{$BAM->{'big_wig_urls'}} ) . "\n\n";
+	print join( "\n", @{ $BAM->{'big_wig_urls'} } ) . "\n\n";
 	open( LOG, ">$bigwigTracks.log" )
 	  or die "I could not open the log file '$bigwigTracks.log'\n$!\n";
 	print LOG $task_description . "\n";
