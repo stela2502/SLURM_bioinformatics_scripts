@@ -1,4 +1,5 @@
 package stefans_libs::SLURM;
+
 #  Copyright (C) 2016-05-31 Stefan Lang
 
 #  This program is free software; you can redistribute it
@@ -51,20 +52,20 @@ new returns a new object reference of the class stefans_libs::SLURM.
 
 =cut
 
-sub new{
+sub new {
 
 	my ( $class, $options ) = @_;
 
 	my $self = {
 		'SLURM_modules' => [],
-		'sub_SLURMS' => [],
+		'sub_SLURMS'    => [],
 	};
 
 	$self->{'debug'} ||= 0;
 
-	bless $self, $class  if ( $class eq "stefans_libs::SLURM" );
+	bless $self, $class if ( $class eq "stefans_libs::SLURM" );
 
-	$self->options( $options );
+	$self->options($options);
 
 	$self->{'max_jobs'} ||= 40;
 
@@ -75,29 +76,30 @@ sub new{
 	chomp($name);
 	$self->{'username'} = $name;
 
-	$self->clean_slurm_options( $options );
-  	return $self;
+	$self->clean_slurm_options($options);
+	return $self;
 }
 
 sub define_Subscript {
-	my ( $self ) = @_;
+	my ($self) = @_;
 	my $sub = ref($self)->new();
-	push( @{$self->{'sub_SLURMS'}}, $sub);
+	push( @{ $self->{'sub_SLURMS'} }, $sub );
 	return $sub;
 }
 
 sub options {
 	my ( $self, $options ) = @_;
-	if ( ref($options) eq "HASH"){
-		foreach my $key  (keys %$options ) {
+	if ( ref($options) eq "HASH" ) {
+		foreach my $key ( keys %$options ) {
 			$self->{$key} = $options->{$key};
 		}
 	}
 	if ( defined $self->{'mail-user'} ) {
 		$self->{'mail-type'} ||= 'END';
 		my $OK = { map { $_ => 1 } 'BEGIN', 'END', 'FAIL', 'REQUEUE', 'ALL' };
-		unless ( $OK->{$self->{'mail-type'}} ){
-			warn "option 'mail-type' $self->{'mail-type'} is not supported - set to END\n";
+		unless ( $OK->{ $self->{'mail-type'} } ) {
+			warn
+"option 'mail-type' $self->{'mail-type'} is not supported - set to END\n";
 			$self->{'mail-type'} = 'END';
 		}
 	}
@@ -105,7 +107,7 @@ sub options {
 }
 
 sub wait_for_last_finished {
-	my ($self, $fname) = @_;
+	my ( $self, $fname ) = @_;
 	my $wait;
 	while ( $wait = $self->in_pipeline('PD') > 4 ) {
 		warn "waiting for $wait processes\n";
@@ -115,25 +117,27 @@ sub wait_for_last_finished {
 
 sub pids_finished {
 	my ( $self, @pids ) = @_;
-	return 1 unless ( @pids );
+	return 1 unless (@pids);
 	my $cmd = "squeue -u $self->{'username'} |";
 	open( IN, $cmd ) or die $!;
 	my @IN = <IN>;
 	close(IN);
 	my $ret = 1;
 	my (@line);
-	my $search = { map { $_ => 1} @pids };
-	foreach ( @IN ) {
+	my $search = { map { $_ => 1 } @pids };
+
+	foreach (@IN) {
 		$_ =~ s/^\s*//;
-		@line=split(/\s+/,$_);
-		$ret = 0 if ( $search->{$line[0]});
+		@line = split( /\s+/, $_ );
+		$ret = 0 if ( $search->{ $line[0] } );
 	}
 	return $ret;
 }
 
 sub in_pipeline {
-	my $self = shift;
+	my $self   = shift;
 	my $select = shift;
+
 	#print "squeue -u $self->{'username'}\n";
 	open( IN, "squeue -u $self->{'username'} |" ) or die $!;
 	my @IN = <IN>;
@@ -143,19 +147,18 @@ sub in_pipeline {
 	#print "In total ".scalar(@IN)." jobs\n";
 	if ( $self->{'partitition'} ) {
 		@IN = grep( /\s$self->{'partitition'}\s/, @IN );
+
 		#print scalar(@IN)." jobs in partitcion $self->{'partitition'}\n";
 	}
 	else {
 		@IN = grep( /\ssnic\s/, @IN );
 	}
-	if ( $select ){
+	if ($select) {
 		return scalar( grep ( /\s$select\s/, @IN ) );
 	}
 	## all
 	return scalar(@IN) - 1;
 }
-
-
 
 =head3 script ( $cmd )
 Creates a script file string like that:
@@ -175,40 +178,49 @@ Creates a script file string like that:
 
 sub script {
 	my ( $self, $cmd, $name ) = @_;
-	&check ( { cmd=>$cmd, name=> $name}, 'cmd', 'name' );
-	my @o = qw( n N t ); # A); # A could be optional - make the user responsible again!
-	$self->check( @o );
-	my $ret = '#! /bin/bash'."\n";
-	if ( $self->{'partitition'}) {
-		$ret .= "#SBATCH -p $self->{'partitition'}\n"
+	&check( { cmd => $cmd, name => $name }, 'cmd', 'name' );
+	my @o = qw( n N t )
+	  ;    # A); # A could be optional - make the user responsible again!
+	$self->check(@o);
+	my $ret = '#! /bin/bash' . "\n";
+	if ( $self->{'partitition'} ) {
+		$ret .= "#SBATCH -p $self->{'partitition'}\n";
+		delete( $self->{'p'} ) if ( defined ( $self->{'p'} ));
 	}
-	elsif ( $self->{'A'} =~ m/^lu/ ){ ## add one for each partitition you want to explicitly support
+	elsif ( $self->{'A'} =~ m/^lu/ )
+	{      ## add one for each partitition you want to explicitly support
 		$self->{'partitition'} = 'lu';
 		$ret .= "#SBATCH -p lu\n";
 	}
-	foreach my $option ( @o, 'mail-user', 'mail-type', 'mem-per-cpu' ) {
-		next unless ( $self->{$option} );
-		if ( length( $option) == 1 ) {
+	foreach my $option ( @o, 'A', 'p', 'mail-user', 'mail-type', 'mem-per-cpu' ) {
+		next unless ( defined $self->{$option} );
+		if ( length($option) == 1 ) {
 			$ret .= "#SBATCH -$option $self->{$option}\n";
-		}else {
+		}
+		else {
 			$ret .= "#SBATCH --$option $self->{$option}\n";
 		}
 
 	}
-	$ret .= join("\n", "#SBATCH -J $name","#SBATCH -o $name"."%j.out","#SBATCH -e $name"."%j.err");
-	if ( @{$self->{'SLURM_modules'}} ) {
-		$ret .= "\n". $self->load_SLURM_modules();
+	$ret .= join( "\n",
+		"#SBATCH -J $name",
+		"#SBATCH -o $name" . "%j.out",
+		"#SBATCH -e $name" . "%j.err" );
+	if ( @{ $self->{'SLURM_modules'} } ) {
+		$ret .= "\n" . $self->load_SLURM_modules();
 	}
 	if ( ref($cmd) eq "ARRAY" ) {
-		$ret .= "\n".shift(@$cmd);
-		for (my $i = 0; $i < @$cmd; $i ++ ){
-			$ret .= @{$self->{'sub_SLURMS'}}[$i]->subscript( @$cmd[$i]);
+		$ret .= "\n" . shift(@$cmd);
+		for ( my $i = 0 ; $i < @$cmd ; $i++ ) {
+			$ret .= @{ $self->{'sub_SLURMS'} }[$i]->subscript( @$cmd[$i] );
 		}
-	}else {
+	}
+	else {
 		$ret .= "\n$cmd\n";
 	}
 	return $ret;
 }
+
 =head2 subscript ( $cmd )
 
 Create only the module loads and the cmd parts of the script.
@@ -219,16 +231,17 @@ This function is used internally to create scripts that need different sets of m
 sub subscript {
 	my ( $self, $cmd ) = @_;
 	my $ret = '';
-	if ( @{$self->{'SLURM_modules'}} ) {
-		$ret .=  $self->load_SLURM_modules();
+	if ( @{ $self->{'SLURM_modules'} } ) {
+		$ret .= $self->load_SLURM_modules();
 	}
-	$ret .= "\n".$cmd."\n";
+	$ret .= "\n" . $cmd . "\n";
 	return $ret;
 }
 
 sub load_R_x11 {
-	my ( $self ) = @_;
-	my $cmd = $self->load_SLURM_modules ( 'ifort/2016.1.150-GCC-4.9.3-2.25',  'impi/5.1.2.150', 'R/3.2.3-libX11-1.6.3');
+	my ($self) = @_;
+	my $cmd = $self->load_SLURM_modules( 'ifort/2016.1.150-GCC-4.9.3-2.25',
+		'impi/5.1.2.150', 'R/3.2.3-libX11-1.6.3' );
 	print "please run\n$cmd" if ( $cmd =~ m/\w/ );
 	return $cmd;
 }
@@ -237,46 +250,53 @@ sub load_SLURM_modules {
 	my ( $self, @modules ) = @_;
 	my $loaded;
 	if ( !$self->{'purge'} ) {
-		system("bash -c 'module list 2> /tmp/modulelist.tmp'" );
-		open ( IN, "</tmp/modulelist.tmp" ) or die "could not open the tmp module list (/tmp/modulelist.tmp)\n$!\n";
-		
-		foreach ( <IN> ) {
-			next if ( $_ =~ m/Currently Loaded Modules/);
+		system("bash -c 'module list 2> /tmp/modulelist.tmp'");
+		open( IN, "</tmp/modulelist.tmp" )
+		  or die
+		  "could not open the tmp module list (/tmp/modulelist.tmp)\n$!\n";
+
+		foreach (<IN>) {
+			next if ( $_ =~ m/Currently Loaded Modules/ );
 			chomp($_);
-			$_ =~s/\s+\d+\)\s+/;/g;
-			map{ if ( $_ =~ m/\w/ ) {$loaded -> {$_} = 1 } } split(";" ,$_);
+			$_ =~ s/\s+\d+\)\s+/;/g;
+			map {
+				if ( $_ =~ m/\w/ ) { $loaded->{$_} = 1 }
+			} split( ";", $_ );
 		}
-		close ( IN );
-		unlink( "/tmp/modulelist.tmp" );
-		print "Hope there is some loaded module?: ".root->print_perl_var_def( $loaded ) if ( $self->{debug});
-	
-	}else {
+		close(IN);
+		unlink("/tmp/modulelist.tmp");
+		print "Hope there is some loaded module?: "
+		  . root->print_perl_var_def($loaded)
+		  if ( $self->{debug} );
+
+	}
+	else {
 		$loaded = {};
 	}
-	
-	
+
 	my $modules_to_load = '';
-	if ( @{$self->{'SLURM_modules'}}) {
-		push (@modules,  @{$self->{'SLURM_modules'}});
+	if ( @{ $self->{'SLURM_modules'} } ) {
+		push( @modules, @{ $self->{'SLURM_modules'} } );
 	}
-	foreach ( @modules ){
-		$modules_to_load .= "$_ " unless ( $loaded->{$_});
+	foreach (@modules) {
+		$modules_to_load .= "$_ " unless ( $loaded->{$_} );
 	}
-	if ($modules_to_load =~m/\w/ ) {
+	if ( $modules_to_load =~ m/\w/ ) {
 		$modules_to_load = "module load $modules_to_load";
 	}
 	if ( $self->{'purge'} ) {
 		return "module purge\n$modules_to_load";
 	}
-	return $modules_to_load;	
+	return $modules_to_load;
 }
 
 sub clean_slurm_options {
 	my ( $self, $hash ) = @_;
 	foreach my $t ( qw( n N t A), 'mail-user', 'mail-type', 'mem-per-cpu' ) {
-		delete ($hash ->{$t}) if defined ( $hash->{$t});
+		delete( $hash->{$t} ) if defined( $hash->{$t} );
 	}
 }
+
 =head3 run ( $cmd, $fm )
 
 Creates the run script based on the $fm =stefans_libs::root->filemap($file).
@@ -288,41 +308,49 @@ The script will be created in $fm->{path} and run using SBATCH if the debug valu
 sub run {
 	my ( $self, $cmd, $fm ) = @_;
 
-	unless ( ref($fm) eq "HASH" ){
+	unless ( ref($fm) eq "HASH" ) {
 		$fm = root->filemap($fm);
 	}
-	my $s = $self->script($cmd, $fm->{'filename_core'} );
-	open ( OUT ,">$fm->{path}/$fm->{'filename_core'}.sh" ) or Carp::confess ( "I can not create the script file '$fm->{path}/$fm->{'filename_core'}.sh'\n$!\n");
+	my $s = $self->script( $cmd, $fm->{'filename_core'} );
+	open( OUT, ">$fm->{path}/$fm->{'filename_core'}.sh" )
+	  or Carp::confess(
+"I can not create the script file '$fm->{path}/$fm->{'filename_core'}.sh'\n$!\n"
+	  );
 	print OUT $s;
-	close ( OUT );
-	my @ALL = split("\n", $cmd);
-	my @OK = grep( ! /^#/, @ALL );
-	@OK = grep ( ! /^\s*$/, @OK );
+	close(OUT);
+	my @ALL = split( "\n", $cmd );
+	my @OK = grep( !/^#/, @ALL );
+	@OK = grep ( !/^\s*$/, @OK );
 
 	if ( @OK > 0 and !$self->{'debug'} ) {
-		#	print "test if I am allowed to submitt the job: ($self->{'partitition'},$self->{'max_jobs'}) ".$self-> in_pipeline()." >= $self->{'max_jobs'}?\n";
-		if ( $self-> in_pipeline () >= $self->{'max_jobs'}){
+
+#	print "test if I am allowed to submitt the job: ($self->{'partitition'},$self->{'max_jobs'}) ".$self-> in_pipeline()." >= $self->{'max_jobs'}?\n";
+		if ( $self->in_pipeline() >= $self->{'max_jobs'} ) {
 			$self->wait_for_last_finished();
 		}
 		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
-		system( "rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out");
-		open(PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
-		my $tmp = join("", <PID>);
+		system("rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out");
+		open( PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
+		my $tmp = join( "", <PID> );
 		print $tmp;
 		if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
 			return $1;
 		}
 		return 1;
-	}elsif ( @OK == 0) {
-		print "All outfiles present for $fm->{path}/$fm->{'filename_core'}.sh - not run\n";
+	}
+	elsif ( @OK == 0 ) {
+		print
+"All outfiles present for $fm->{path}/$fm->{'filename_core'}.sh - not run\n";
 		return 0;
 	}
-	else{
-		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh # not run (DEBUG)\n";
+	else {
+		print
+		  "sbatch $fm->{path}/$fm->{'filename_core'}.sh # not run (DEBUG)\n";
 		return 0;
 	}
 	return 0;
 }
+
 =head3 check_4_outfile( $cmd, @outfiles)
 
 Adds a '#' before the command if any outfile exists.
@@ -330,10 +358,11 @@ Adds a '#' before the command if any outfile exists.
 =cut
 
 sub check_4_outfile {
-	my ( $self, $cmd, @outfiles ) =@_;
-	Carp::confess ( "I can not check the outfile for '$cmd' - udefined!\n") unless ( defined $outfiles[0]);
-	foreach my $outfile ( @outfiles){
-		if ( -f $outfile ){
+	my ( $self, $cmd, @outfiles ) = @_;
+	Carp::confess("I can not check the outfile for '$cmd' - udefined!\n")
+	  unless ( defined $outfiles[0] );
+	foreach my $outfile (@outfiles) {
+		if ( -f $outfile ) {
 			warn "outfile '$outfile' is present - I will not re-create it!\n";
 			$cmd = "#$cmd";
 			last;
@@ -343,28 +372,31 @@ sub check_4_outfile {
 }
 
 sub check {
-	my ( $self, @require ) =@_;
+	my ( $self, @require ) = @_;
 	my $error = '';
-	my $type = 'downstream program';
-	if ( ref( $self ) eq "stefans_libs::SLURM"){
+	my $type  = 'downstream program';
+	if ( ref($self) eq "stefans_libs::SLURM" ) {
 		$type = 'SLURM';
 	}
-	map { unless (defined $self->{$_}){ $error .= "MISSING $type option $_\n" } } @require;
+	map {
+		unless ( defined $self->{$_} ) { $error .= "MISSING $type option $_\n" }
+	} @require;
 
-	Carp::confess ( $error ) if ( $error =~ m/\w/ );
+	Carp::confess($error) if ( $error =~ m/\w/ );
 }
 
-sub get_options_from_script{
+sub get_options_from_script {
 	my ( $self, $filename ) = @_;
-	my $ignore = { 'J'=> 1, 'o' =>1, 'e' =>1 };
+	my $ignore = { 'J' => 1, 'o' => 1, 'e' => 1 };
 	unless ( -f $filename ) {
-		warn "I can not read from a not existinf file '$filename' at stefans_libs::SLURM::get_options_from_script\n";
+		warn
+"I can not read from a not existinf file '$filename' at stefans_libs::SLURM::get_options_from_script\n";
 		return $self;
 	}
 	else {
-		open ( IN, "<$filename" ) or die $!;
-		while ( <IN> ) {
-			if ( $_ =~m/^#SBATCH \-+(\w+)\s+(.+)\s*\n/ ) {
+		open( IN, "<$filename" ) or die $!;
+		while (<IN>) {
+			if ( $_ =~ m/^#SBATCH \-+(\w+)\s+(.+)\s*\n/ ) {
 				$self->{$1} = $2 unless ( $ignore->{$1} );
 			}
 		}
