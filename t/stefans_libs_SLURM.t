@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 6;
+use Test::More tests => 7;
 BEGIN { use_ok 'stefans_libs::SLURM' }
 
 use FindBin;
@@ -12,7 +12,9 @@ my ( $value, @values, $exp );
 $value = { n => 2, N => 1, t => '01:00:00', A => 'snic2016-4-13' };
 my $SLURM = stefans_libs::SLURM->new( $value );
 
-is_deeply( ref($SLURM), 'stefans_libs::SLURM',
+is_deeply($SLURM->{'options'}->options(), { n => 2, N => 1, t => '01:00:00', A => 'snic2016-4-13' },"options stored correctly" );
+
+ok( ref($SLURM) eq 'stefans_libs::SLURM',
 	'simple test of function stefans_libs::SLURM -> new()' );
 
 is_deeply( $value, {}, "SLURM variables removbed from hash");
@@ -56,5 +58,8 @@ $exp = [
 	'some_command.pl'
 ];
 is_deeply( $exp, $value, "the script file is as expected" );
+
+$SLURM->{'options'}->save();
+
 #print "\$exp = ".root->print_perl_var_def($value ).";\n";
 

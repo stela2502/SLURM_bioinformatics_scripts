@@ -20,6 +20,11 @@ package stefans_libs::SLURM;
 use strict;
 use warnings;
 
+use File::HomeDir;
+use File::Spec::Functions;
+
+use stefans_libs::flexible_data_structures::optionsFile;
+
 use stefans_libs::root;
 
 =for comment
@@ -59,6 +64,11 @@ sub new {
 	my $self = {
 		'SLURM_modules' => [],
 		'sub_SLURMS'    => [],
+		'options' => stefans_libs::flexible_data_structures::optionsFile->new({
+			'default_file' => File::Spec::Functions::catfile( File::HomeDir->home(), '.SLURM_options.txt' ), 
+			'required' => ['n', 'N', 't' ], 
+			'optional' => ['A','p', 'mail-user', 'mail-type', 'mem-per-cpu' ], 
+		}),
 	};
 
 	$self->{'debug'} ||= 0;
@@ -91,16 +101,20 @@ sub options {
 	my ( $self, $options ) = @_;
 	if ( ref($options) eq "HASH" ) {
 		foreach my $key ( keys %$options ) {
-			$self->{$key} = $options->{$key};
+			$self->{'options'}->add($key, $options->{$key} );
+		}
+		unless ( $self->{'options'}->OK()) {
+			$self->{'options'}->load();
 		}
 	}
-	if ( defined $self->{'mail-user'} ) {
-		$self->{'mail-type'} ||= 'END';
+	
+	if ( defined $self->{'options'}->value('mail-user') ) {
+		$self->{'options'}->add('mail-type', 'END', 0 );
 		my $OK = { map { $_ => 1 } 'BEGIN', 'END', 'FAIL', 'REQUEUE', 'ALL' };
-		unless ( $OK->{ $self->{'mail-type'} } ) {
+		unless ( $OK->{  $self->{'options'}->value('mail-type') } ) {
 			warn
-"option 'mail-type' $self->{'mail-type'} is not supported - set to END\n";
-			$self->{'mail-type'} = 'END';
+"option 'mail-type' ". $self->{'options'}->value('mail-type') ." is not supported - set to 'END'\n";
+			$self->{'options'}->add('mail-type', 'END', 1 );
 		}
 	}
 	return $self;
@@ -179,27 +193,31 @@ Creates a script file string like that:
 sub script {
 	my ( $self, $cmd, $name ) = @_;
 	&check( { cmd => $cmd, name => $name }, 'cmd', 'name' );
-	my @o = qw( n N t )
-	  ;    # A); # A could be optional - make the user responsible again!
-	$self->check(@o);
+	
+	#	$self->{'options'}->{'required'} => ['n', 'N', 't' ],
+	#	$self->{'options'}->{'optional'} => ['A','p', 'mail-user', 'mail-type', 'mem-per-cpu' ],
+
+	$self->{'options'}->check();
+	
 	my $ret = '#! /bin/bash' . "\n";
-	if ( $self->{'partitition'} ) {
-		$ret .= "#SBATCH -p $self->{'partitition'}\n";
-		delete( $self->{'p'} ) if ( defined ( $self->{'p'} ));
+	
+	if ( $self->{'options'}->value('partitition') ) { # a hack if the script already uses p for something else
+		$self->{'options'}->add( 'p', $self->{'options'}->value('partitition'), 1);
+		$self->{'options'}->drop ( 'partitition' );
 	}
-	elsif ( $self->{'A'} =~ m/^lu/ )
+	elsif ( $self->{'options'}->value('A') =~ m/^lu/ )
 	{      ## add one for each partitition you want to explicitly support
-		$self->{'partitition'} = 'lu';
-		$ret .= "#SBATCH -p lu\n";
+		$self->{'options'}->add( 'p', 'lu',1)
 	}
-	foreach my $option ( @o, 'A', 'p', 'mail-user', 'mail-type', 'mem-per-cpu' ) {
-		next unless ( defined $self->{$option} );
-		if ( length($option) == 1 ) {
-			$ret .= "#SBATCH -$option $self->{$option}\n";
-		}
-		else {
-			$ret .= "#SBATCH --$option $self->{$option}\n";
-		}
+	my $tmp;
+	foreach my $option ( @{ $self->{'options'}->{'required'} }, @{ $self->{'options'}->{'optional'} }) {
+#		if ($option eq "A" ) {
+#			Carp::confess ( "I got the option 'A': ".$self->{'options'}->value($option)."\n");
+#		}
+		next unless ( defined $self->{'options'}->value($option) );
+		$tmp = "-";
+		$tmp = '--' if ( length($option) > 1 );
+		$ret .= "#SBATCH $tmp$option ".$self->{'options'}->value($option)."\n";
 
 	}
 	$ret .= join( "\n",
