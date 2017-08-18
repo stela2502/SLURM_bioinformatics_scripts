@@ -21,7 +21,7 @@
 
     runCommand.pl
        -cmd      :The command you want to run
-       -max_jobs :The maximum numer of jobs to the SLURM system for this user (default 40)
+       -max_jobs :The maximum number of jobs to the SLURM system for this user (default 40)
        -options  :format: key_1 value_1 key_2 value_2 ... key_n value_n
        		n  :amount of cores per node
        		N  :amount of nodes
