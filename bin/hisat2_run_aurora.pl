@@ -83,24 +83,25 @@ my $dir = getcwd . "/";
 my $VERSION = 'v1.0';
 
 my (
-	$help,         $debug,          $database, @files,    $options,
-	@options,      $dropDuplicates, $genome,   $coverage, $paired,$fast_tmp,
-	$bigwigTracks, $sra,            $outpath,  $max_jobs, $mapper_options
+	$help,     $debug,   $database,       @files,
+	$options,  @options, $dropDuplicates, $genome,
+	$coverage, $paired,  $fast_tmp,       $bigwigTracks,
+	$sra,      $outpath, $max_jobs,       $mapper_options
 );
 
 Getopt::Long::GetOptions(
-	"-files=s{,}"     => \@files,
-	"-options=s{,}"   => \@options,
-	"-genome=s"       => \$genome,
-	"-coverage=s"     => \$coverage,
-	"-outpath=s"      => \$outpath,
-	"-paired"         => \$paired,
-	"-bigwigTracks=s" => \$bigwigTracks,
-	"-sra"            => \$sra,
-	"-max_jobs=s"     => \$max_jobs,
-	"-dropDuplicates" => \$dropDuplicates,
+	"-files=s{,}"       => \@files,
+	"-options=s{,}"     => \@options,
+	"-genome=s"         => \$genome,
+	"-coverage=s"       => \$coverage,
+	"-outpath=s"        => \$outpath,
+	"-paired"           => \$paired,
+	"-bigwigTracks=s"   => \$bigwigTracks,
+	"-sra"              => \$sra,
+	"-max_jobs=s"       => \$max_jobs,
+	"-dropDuplicates"   => \$dropDuplicates,
 	"-mapper_options=s" => \$mapper_options,
-	"-fast_tmp=s" => \$fast_tmp,
+	"-fast_tmp=s"       => \$fast_tmp,
 
 	"-help"  => \$help,
 	"-debug" => \$debug
@@ -124,13 +125,13 @@ unless ( -f $coverage ) {
 unless ( defined $bigwigTracks ) {
 	$error .= "the cmd line switch -bigwigTracks is undefined!\n";
 }
-unless ( defined $mapper_options) {
+unless ( defined $mapper_options ) {
 	$mapper_options = '';
 }
 unless ($max_jobs) {
 	$max_jobs = 40;
 }
-unless ( $fast_tmp ){
+unless ($fast_tmp) {
 	$fast_tmp = '$SNIC_TMP';
 }
 
@@ -165,7 +166,7 @@ $options->{'p'}    ||= $options->{'proc'};
 
 ###
 
-my ($task_description, $mainOutpath);
+my ( $task_description, $mainOutpath );
 
 $task_description .= 'perl ' . $plugin_path . '/hisat2_run_aurora.pl';
 $task_description .= ' -files "' . join( '" "', @files ) . '"'
@@ -180,9 +181,10 @@ $task_description .= " -bigwigTracks '$bigwigTracks'"
 $task_description .= " -sra"            if ($sra);
 $task_description .= " -dropDuplicates" if ($dropDuplicates);
 $task_description .= " -max_jobs $max_jobs";
-$task_description .= " -mapper_options '$mapper_options'" if ( $mapper_options =~ m/\w/ );
+$task_description .= " -mapper_options '$mapper_options'"
+  if ( $mapper_options =~ m/\w/ );
 $task_description .= " -fast_tmp '$fast_tmp'" if ( $fast_tmp =~ m/\w/ );
-$task_description .= " -debug"          if ($debug);
+$task_description .= " -debug" if ($debug);
 
 ## Do whatever you want!
 my $fm = root->filemap($bigwigTracks);
@@ -195,7 +197,7 @@ open( LOG, ">$bigwigTracks.log" )
 print LOG $task_description;
 close(LOG);
 
-my ( $cmd, $fm, @big_wig_urls, $tmp, $this_outfile );
+my ( @cmd, @big_wig_urls, $tmp, $this_outfile );
 
 my $SLURM = stefans_libs::SLURM->new($options);
 $SLURM->{'debug'} = 1 if ($debug);
@@ -208,10 +210,20 @@ foreach (qw(n N t mem)) {
 $fm = root->filemap( $files[0] );
 
 $SLURM->{'SLURM_modules'} = [
-
-	'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'SAMtools/1.3.1','HISAT2/2.0.4',
+	'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
+	'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'SAMtools/1.3.1',
+	'HISAT2/2.0.4',
 	'BEDTools/2.25.0', 'Java/1.8.0_72', 'picard/2.8.2', 'ucsc-tools/R2016a',
-#	stefans_libs::scripts::BAM->SLURUM_load(),
+
+	#	stefans_libs::scripts::BAM->SLURUM_load(),
+];
+
+$tmp                    = $SLURM->define_Subscript();
+$tmp->{'purge'}         = 1;
+$tmp->{'SLURM_modules'} = [
+	'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
+	'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'BEDTools/2.25.0',
+	'Java/1.8.0_72', 'picard/2.8.2', 'ucsc-tools/R2016a',
 ];
 
 my $BAM = stefans_libs::scripts::BAM->new($options);
@@ -222,15 +234,17 @@ my $submitted = 0;
 while ( scalar(@files) ) {
 	$fm = root->filemap( $files[0] )
 	  ;    ## the files will be depleted by the create_call function!
-	$cmd = &chk_cmd( &create_call() );
-	$cmd .= &chk_cmd( $BAM->convert_sam_2_sorted_bam($this_outfile, $mainOutpath) );
-	$cmd .= &chk_cmd( create_picard_call($this_outfile) ) if ( $dropDuplicates );
-	$cmd .=
+	$cmd[0] = &chk_cmd( &create_call() );
+	$cmd[0] .=
+	  &chk_cmd( $BAM->convert_sam_2_sorted_bam( $this_outfile, $mainOutpath ) );
+	$cmd[1] .= &chk_cmd( create_picard_call($this_outfile) ) if ($dropDuplicates);
+	$cmd[1] .=
 	  &chk_cmd(
 		$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) );
 
-	$cmd .= &chk_cmd($BAM->convert_bedGraph_2_bigwig($this_outfile,$coverage));
-	$tmp = $SLURM->run( $cmd, $fm, $this_outfile );
+	$cmd[1] .=
+	  &chk_cmd( $BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) );
+	$tmp = $SLURM->run( \@cmd, $fm, $this_outfile );
 	$submitted++ if ( $tmp == 1 );
 	if ( $submitted >= $max_jobs ) {
 		$submitted -= 50;
@@ -251,37 +265,6 @@ if ( @{ $BAM->{'big_wig_urls'} } > 0 ) {
 }
 
 print "Done\n";
-
-#sub wait_for_last_finished {
-#	my ($fname) = @_;
-#	my $wait;
-#	while ( $wait = &in_pipeline() > 4 ) {
-#		warn "waiting for $wait processes\n";
-#		sleep(50);
-#	}
-#}
-#
-#sub in_pipeline {
-#	open( IN, "whoami |" ) or die $!;
-#	my @IN = <IN>;
-#	close(IN);
-#	my $name = $IN[0];
-#	chomp($name);
-#	open( IN, "squeue -u $name |" ) or die $!;
-#	@IN = <IN>;
-#	close(IN);
-#	## pending
-#	## I also need to take care about the different partititions:
-#	if ( $SLURM->{'partitition'} ) {
-#		@IN = grep( /\s$SLURM->{'partitition'}\s/, @IN );
-#	}
-#	else {
-#		@IN = grep( /\ssnic\s/, @IN );
-#	}
-#	return scalar( grep ( /\sPD\s/, @IN ) );
-#	## all
-#	return scalar(@IN) - 1;
-#}
 
 sub create_picard_call {
 	my ($file) = @_;

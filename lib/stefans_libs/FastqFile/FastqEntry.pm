@@ -135,6 +135,139 @@ sub quality {
 	return @{ $self->{'data'} }[3];
 }
 
+=head is_polyA ($ignore, $cutoff)
+
+Checks if more than 95% of the read -$ignore (||=10) first bases are A's.
+It also removes bad quality bases to before checking the A contend ($cutoff = 10).
+Does not tuch the read itself.
+Return 1 or 0.
+
+=cut
+
+sub is_polyA {
+	my ($self, $ignore, $cutoff )= @_;
+	$ignore ||=10;
+	$cutoff ||= 10;
+	$self = $self->copy();
+	$self->drop_low_quality($cutoff);
+	return 1 if ( length($self->sequence) == 0);
+	$self->trim( 'start', 10 );
+	return 1 if ( length($self->sequence) == 0);
+	my $notA = 0;
+	
+	map { $notA ++ unless ( $_ eq "A") } split("",$self->sequence());
+	if ( $notA / length($self->sequence() ) <= 0.05 ) { ## less than 5 % not A's - likely a polyA only read
+		return 1;
+	}
+	return 0;
+}
+
+=head3 trim ($self, $where, $position)
+
+trim up to bp $position if $where = 'start' and from $position to end if $where = 'end'
+
+=cut
+
+sub trim {
+	my ($self, $where, $position) = @_;
+	$position ||= 0;
+	return $self if ( $position == 0);
+	my @seq = split( "", $self->sequence() );
+	my @origQ = split("", $self->quality() );
+	
+	if ( $where eq "start" ) {
+		splice( @seq, 0,$position );
+		splice( @origQ, 0,$position )
+	}elsif ($where eq "end" ) {
+		splice( @seq, $position,scalar(@seq)-$position );
+		splice( @origQ, $position,scalar(@origQ)-$position )
+	}
+	else { Carp::confess ( "trim ($self, $where, $position) can not trim the position '$where', only start or end")}
+	
+	$self->quality(join("",@origQ));
+	$self->sequence( join("", @seq));
+	return $self;
+}
+
+=head filter_low_quality ($cutoff)
+
+This will filter areas at the beginning and end of the read where the mean quality is below $cutoff (||=10).
+
+=cut
+
+sub filter_low_quality{
+	my ( $self, $cutoff) = @_;
+	$cutoff ||=10;
+	my @seq = split( "", $self->sequence() );
+	my @origQ = split("", $self->quality() );
+	my @qual = $self->quality(undef,1);
+	my ( $sum, $n);
+	## trim start
+	$sum = $n = 0;
+	for ( my $i = 0; $i < @seq; $i ++ ) {
+		$sum += $qual[$i];
+		$n ++;
+		if ( $sum / $n > $cutoff ){
+			$n --;
+			last;
+		}
+	}
+	if ( $n > 0 ){
+		splice(@seq, 0, $n );
+		splice(@origQ, 0, $n);
+		splice(@qual, 0, $n);
+	}
+	# trim end
+	$sum = $n = 0;
+	for ( my $i = @seq-1; $i >= 0; $i -- ) {
+		$sum += $qual[$i];
+		$n ++;
+		if ( $sum / $n > $cutoff ){
+			$n --;
+			last;
+		}
+	}
+	if ( $n > 0 ){
+		my $s = @seq - $n;
+		splice(@seq, $s, $n );
+		splice(@origQ, $s, $n);
+		splice(@qual, $s, $n);
+	}
+	$self->sequence(join("", @seq));
+	$self->quality (join("", @origQ));
+	warn "seq sength after filter:".scalar(@seq)."\n";
+	return $self;
+}
+
+=head drop_low_quality ($cutoff)
+
+will drop all sequence entries with a quality below $cutoff (||=10).
+THIS WILL ADD INDELS TO THE SEQUENCE
+
+=cut
+
+sub drop_low_quality {
+	my ( $self, $cutoff ) = @_;
+	$cutoff ||= 10;
+	my @seq = split( "", $self->sequence() );
+	my @origQ = split("", $self->quality() );
+	
+	my @qual = $self->quality(undef,1);
+	my $c = 0;
+	for ( my $i = @qual-1 ;$i >=0; $i -- ) {
+		if ( $qual[$i] <= $cutoff ) {
+			$c = 1;
+			splice(@seq,$i,1 );
+			splice(@origQ, $i,1);
+		}
+	}
+	if ( $c ) {
+		$self->quality(join("",@origQ));
+		$self->sequence( join("", @seq));
+	}
+	return $self;
+}
+
 =head3 distance_to (string, start, length)
 
 This function expects the string to be the same length as the internal string.
