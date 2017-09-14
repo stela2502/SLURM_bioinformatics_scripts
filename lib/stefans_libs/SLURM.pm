@@ -62,13 +62,21 @@ sub new {
 	my ( $class, $options ) = @_;
 
 	my $self = {
+		'shell' => 'bash',
+		'local' => 0
+		, ## if local run does not return but waits for the process and all slurm scripts are not called
 		'SLURM_modules' => [],
 		'sub_SLURMS'    => [],
-		'options' => stefans_libs::flexible_data_structures::optionsFile->new({
-			'default_file' => File::Spec::Functions::catfile( File::HomeDir->home(), '.SLURM_options.txt' ), 
-			'required' => ['n', 'N', 't' ], 
-			'optional' => ['A','p', 'mail-user', 'mail-type', 'mem-per-cpu' ], 
-		}),
+		'options' => stefans_libs::flexible_data_structures::optionsFile->new(
+			{
+				'default_file' => File::Spec::Functions::catfile(
+					File::HomeDir->home(), '.SLURM_options.txt'
+				),
+				'required' => [ 'n', 'N', 't' ],
+				'optional' =>
+				  [ 'A', 'p', 'mail-user', 'mail-type', 'mem-per-cpu' ],
+			}
+		),
 	};
 
 	$self->{'debug'} ||= 0;
@@ -101,20 +109,21 @@ sub options {
 	my ( $self, $options ) = @_;
 	if ( ref($options) eq "HASH" ) {
 		foreach my $key ( keys %$options ) {
-			$self->{'options'}->add($key, $options->{$key} );
+			$self->{'options'}->add( $key, $options->{$key} );
 		}
-		unless ( $self->{'options'}->OK()) {
+		unless ( $self->{'options'}->OK() ) {
 			$self->{'options'}->load();
 		}
 	}
-	
+
 	if ( defined $self->{'options'}->value('mail-user') ) {
-		$self->{'options'}->add('mail-type', 'END', 0 );
+		$self->{'options'}->add( 'mail-type', 'END', 0 );
 		my $OK = { map { $_ => 1 } 'BEGIN', 'END', 'FAIL', 'REQUEUE', 'ALL' };
-		unless ( $OK->{  $self->{'options'}->value('mail-type') } ) {
-			warn
-"option 'mail-type' ". $self->{'options'}->value('mail-type') ." is not supported - set to 'END'\n";
-			$self->{'options'}->add('mail-type', 'END', 1 );
+		unless ( $OK->{ $self->{'options'}->value('mail-type') } ) {
+			warn "option 'mail-type' "
+			  . $self->{'options'}->value('mail-type')
+			  . " is not supported - set to 'END'\n";
+			$self->{'options'}->add( 'mail-type', 'END', 1 );
 		}
 	}
 	return $self;
@@ -131,6 +140,7 @@ sub wait_for_last_finished {
 
 sub pids_finished {
 	my ( $self, @pids ) = @_;
+	return 1 if ( $self->{'local'} );
 	return 1 unless (@pids);
 	my $cmd = "squeue -u $self->{'username'} |";
 	open( IN, $cmd ) or die $!;
@@ -151,6 +161,7 @@ sub pids_finished {
 sub in_pipeline {
 	my $self   = shift;
 	my $select = shift;
+	return 0 if ( $self->{'local'} );
 
 	#print "squeue -u $self->{'username'}\n";
 	open( IN, "squeue -u $self->{'username'} |" ) or die $!;
@@ -193,31 +204,38 @@ Creates a script file string like that:
 sub script {
 	my ( $self, $cmd, $name ) = @_;
 	&check( { cmd => $cmd, name => $name }, 'cmd', 'name' );
-	
-	#	$self->{'options'}->{'required'} => ['n', 'N', 't' ],
-	#	$self->{'options'}->{'optional'} => ['A','p', 'mail-user', 'mail-type', 'mem-per-cpu' ],
+
+#	$self->{'options'}->{'required'} => ['n', 'N', 't' ],
+#	$self->{'options'}->{'optional'} => ['A','p', 'mail-user', 'mail-type', 'mem-per-cpu' ],
 
 	$self->{'options'}->check();
-	
+
 	my $ret = '#! /bin/bash' . "\n";
-	
-	if ( $self->{'options'}->value('partitition') ) { # a hack if the script already uses p for something else
-		$self->{'options'}->add( 'p', $self->{'options'}->value('partitition'), 1);
-		$self->{'options'}->drop ( 'partitition' );
+
+	if ( $self->{'options'}->value('partitition') )
+	{    # a hack if the script already uses p for something else
+		$self->{'options'}
+		  ->add( 'p', $self->{'options'}->value('partitition'), 1 );
+		$self->{'options'}->drop('partitition');
 	}
 	elsif ( $self->{'options'}->value('A') =~ m/^lu/ )
-	{      ## add one for each partitition you want to explicitly support
-		$self->{'options'}->add( 'p', 'lu',1)
+	{    ## add one for each partitition you want to explicitly support
+		$self->{'options'}->add( 'p', 'lu', 1 );
 	}
 	my $tmp;
-	foreach my $option ( @{ $self->{'options'}->{'required'} }, @{ $self->{'options'}->{'optional'} }) {
+	foreach my $option (
+		@{ $self->{'options'}->{'required'} },
+		@{ $self->{'options'}->{'optional'} }
+	  )
+	{
 #		if ($option eq "A" ) {
 #			Carp::confess ( "I got the option 'A': ".$self->{'options'}->value($option)."\n");
 #		}
 		next unless ( defined $self->{'options'}->value($option) );
 		$tmp = "-";
 		$tmp = '--' if ( length($option) > 1 );
-		$ret .= "#SBATCH $tmp$option ".$self->{'options'}->value($option)."\n";
+		$ret .=
+		  "#SBATCH $tmp$option " . $self->{'options'}->value($option) . "\n";
 
 	}
 	$ret .= join( "\n",
@@ -266,6 +284,7 @@ sub load_R_x11 {
 
 sub load_SLURM_modules {
 	my ( $self, @modules ) = @_;
+	return '' if ( $self->{'local'} );
 	my $loaded;
 	if ( !$self->{'purge'} ) {
 		system("bash -c 'module list 2> /tmp/modulelist.tmp'");
@@ -341,20 +360,29 @@ sub run {
 	@OK = grep ( !/^\s*$/, @OK );
 
 	if ( @OK > 0 and !$self->{'debug'} ) {
+		if ( $self->{'local'} ) {
+			## add a local stdout and stderr file like slurm does.
+			system( $self->{'shell'}
+				  . " $fm->{path}/$fm->{'filename_core'}.sh" );
+			return 1;
+		}
+		else {           ## use slurm pipeline
 
 #	print "test if I am allowed to submitt the job: ($self->{'partitition'},$self->{'max_jobs'}) ".$self-> in_pipeline()." >= $self->{'max_jobs'}?\n";
-		if ( $self->in_pipeline() >= $self->{'max_jobs'} ) {
-			$self->wait_for_last_finished();
+			if ( $self->in_pipeline() >= $self->{'max_jobs'} ) {
+				$self->wait_for_last_finished();
+			}
+			print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
+			system(
+				"rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out");
+			open( PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
+			my $tmp = join( "", <PID> );
+			print $tmp;
+			if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
+				return $1;
+			}
+			return 1;
 		}
-		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
-		system("rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out");
-		open( PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
-		my $tmp = join( "", <PID> );
-		print $tmp;
-		if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
-			return $1;
-		}
-		return 1;
 	}
 	elsif ( @OK == 0 ) {
 		print
