@@ -363,7 +363,7 @@ sub run {
 		if ( $self->{'local'} ) {
 			## add a local stdout and stderr file like slurm does.
 			system( $self->{'shell'}
-				  . " $fm->{path}/$fm->{'filename_core'}.sh" );
+				  . " $fm->{path}/$fm->{'filename_core'}.sh 2> $fm->{path}/$fm->{'filename_core'}.stderr > $fm->{path}/$fm->{'filename_core'}.stdout " );
 			return 1;
 		}
 		else {           ## use slurm pipeline
