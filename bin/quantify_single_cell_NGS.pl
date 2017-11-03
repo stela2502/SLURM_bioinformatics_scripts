@@ -269,7 +269,12 @@ print SCR join(
 			join( "\n",
 				"load('$tmp_path/Robject$id.RData')",
 				"dat\$counts <- cbind(dat\$counts, dat$id\$counts )",
-				"dat\$stat <- cbind(dat\$stat, dat$id\$stat[,-1] )" )
+				"dat\$stat <- cbind(dat\$stat, dat$id\$stat[,-1] )",
+				"# the stat colnames get lost if dat$id\$stat[,-1] is a vector",
+				"if ( class(dat$id\$stat[,-1]) == 'integer' ){",
+				"  colnames(dat\$stat)[ncol(dat\$stat)] = colnames(dat$id\$stat)[2]",
+				"}"
+				)
 		} 2 .. $a
 	),
 	"save(dat, file='$outfile')",

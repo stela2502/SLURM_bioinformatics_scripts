@@ -199,7 +199,7 @@ close(LOG);
 
 my ( @cmd, @big_wig_urls, $tmp, $this_outfile );
 
-my $SLURM = stefans_libs::SLURM->new($options);
+my $SLURM = stefans_libs::SLURM->new($options, 0);
 $SLURM->{'debug'} = 1 if ($debug);
 
 ## kick all SLURM options that should not be used for the hisat run
@@ -213,7 +213,7 @@ $SLURM->{'SLURM_modules'} = [
 	'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
 	'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'SAMtools/1.3.1',
 	'HISAT2/2.0.4',
-	'BEDTools/2.25.0', 'Java/1.8.0_72', 'picard/2.8.2', 'ucsc-tools/R2016a',
+	'BEDTools/2.25.0', 'Java/1.8.0_72', 'ucsc-tools/R2016a',
 
 	#	stefans_libs::scripts::BAM->SLURUM_load(),
 ];

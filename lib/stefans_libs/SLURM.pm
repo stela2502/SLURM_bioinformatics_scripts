@@ -59,8 +59,10 @@ new returns a new object reference of the class stefans_libs::SLURM.
 
 sub new {
 
-	my ( $class, $options ) = @_;
+	my ( $class, $options, $clean ) = @_;
 
+	$clean = 1 unless ( defined $clean);
+	
 	my $self = {
 		'SLURM_modules' => [],
 		'sub_SLURMS'    => [],
@@ -85,8 +87,10 @@ sub new {
 	my $name = $IN[0];
 	chomp($name);
 	$self->{'username'} = $name;
-
-	$self->clean_slurm_options($options);
+	if ( $clean ){
+		$self->clean_slurm_options($options);
+	}
+	
 	return $self;
 }
 
@@ -310,6 +314,7 @@ sub load_SLURM_modules {
 
 sub clean_slurm_options {
 	my ( $self, $hash ) = @_;
+	warn "I am removing slurm options from the options hash\n";
 	foreach my $t ( qw( n N t A), 'mail-user', 'mail-type', 'mem-per-cpu' ) {
 		delete( $hash->{$t} ) if defined( $hash->{$t} );
 	}
