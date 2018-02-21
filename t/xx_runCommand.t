@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 use FindBin;
 my $plugin_path = $FindBin::Bin;
@@ -15,8 +15,10 @@ if ( -d "$plugin_path/data/outpath/SLURM_run/" ) {
 }
 
 $cmd =
-" perl -I $plugin_path/../lib/ $exec -cmd 'Do nothing at all' -outfile '$plugin_path/data/outpath/SLURM_run/SLURM_result.txt' -options A 'notOfInterest' -I_have_loaded_all_modules -debug";
-
+" perl -I $plugin_path/../lib/ $exec -cmd 'Do nothing at all' "
+ . " -outfile '$plugin_path/data/outpath/SLURM_run/SLURM_result.txt'"
+ . " -options A 'notOfInterest' p 'dell' -I_have_loaded_all_modules -debug";
+ 
 system($cmd );
 
 ok( -f "$plugin_path/data/outpath/SLURM_run/SLURM_result.sh",
@@ -38,6 +40,7 @@ $exp = [
 	'#SBATCH -N 1',
 	'#SBATCH -t 02:00:00',
 	'#SBATCH -A notOfInterest',
+	'#SBATCH -p dell',
 	'#SBATCH -J SLURM_result',
 	'#SBATCH -o SLURM_result%j.out',
 	'#SBATCH -e SLURM_result%j.err',
@@ -74,6 +77,7 @@ $exp = [
 	'#SBATCH -N 2',
 	'#SBATCH -t 02:00:00',
 	'#SBATCH -A notOfInterest',
+	'#SBATCH -p dell',
 	'#SBATCH --mail-user someone@somewhere.com',
 	'#SBATCH --mail-type END',
 	'#SBATCH -J SLURM_result',
@@ -83,5 +87,36 @@ $exp = [
 ];
 
 is_deeply( \@values, $exp, "right entries in the SLURM script + mail option" );
+
+
+$cmd =
+" perl -I $plugin_path/../lib/ $exec -cmd 'Do nothing at all but mention \$SNIC_TMP' "
+ . " -outfile '$plugin_path/data/outpath/SLURM_run/SLURM_result.txt'"
+ . " -options A 'notOfInterest' p 'dell' -I_have_loaded_all_modules -debug";
+ 
+system($cmd );
+
+open( F, "<$plugin_path/data/outpath/SLURM_run/SLURM_result.sh" )
+  or die "I could not open the slurm script\n$!\n";
+@values = map { chomp; $_ } <F>;
+close(F);
+
+$exp = [
+	'#! /bin/bash',
+	'#SBATCH -n 10',
+	'#SBATCH -N 1',
+	'#SBATCH -t 02:00:00',
+	'#SBATCH -A notOfInterest',
+	'#SBATCH -p dell',
+	'#SBATCH -J SLURM_result',
+	'#SBATCH -o SLURM_result%j.out',
+	'#SBATCH -e SLURM_result%j.err',
+	'Do nothing at all but mention $SNIC_TMP',
+	'cp -R $SNIC_TMP/* '.$plugin_path.'/data/outpath/SLURM_run',
+	''
+];
+
+is_deeply( \@values, $exp, "right entries in the SLURM script + \$SNIC_TMP usage" );
+
 
 #print " \$exp = " . root->print_perl_var_def( \@values ) . ";\n ";

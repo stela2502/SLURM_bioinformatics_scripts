@@ -138,6 +138,12 @@ $options->{'debug'} = $debug;
 $options->{'max_jobs'} ||= $max_jobs;
 
 my $SLURM =stefans_libs::SLURM->new( $options );
+$SLURM->{'debug'} = $debug;
+
+if ( $cmd =~ m/\$SNIC_TMP/ ) {
+	## Ohoh - the output will go into the node specific $SNIC_TMP folder and has to be copied into the right outpath afterwards!
+	$cmd .= "\ncp -R \$SNIC_TMP/* $fm->{'path'}\n";
+}
 
 $SLURM->run( $cmd, $fm );
 
