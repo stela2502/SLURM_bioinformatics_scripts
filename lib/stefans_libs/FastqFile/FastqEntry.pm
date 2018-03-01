@@ -235,7 +235,7 @@ sub filter_low_quality{
 	}
 	$self->sequence(join("", @seq));
 	$self->quality (join("", @origQ));
-	warn "seq sength after filter:".scalar(@seq)."\n";
+	#warn "seq sength after filter:".scalar(@seq)."\n";
 	return $self;
 }
 

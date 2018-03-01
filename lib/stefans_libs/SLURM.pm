@@ -64,6 +64,7 @@ sub new {
 	$clean = 1 unless ( defined $clean);
 	
 	my $self = {
+		'run_local' => 0,
 		'SLURM_modules' => [],
 		'sub_SLURMS'    => [],
 		'options' => stefans_libs::flexible_data_structures::optionsFile->new({
@@ -352,12 +353,19 @@ sub run {
 			$self->wait_for_last_finished();
 		}
 		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
-		system("rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out");
-		open( PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
-		my $tmp = join( "", <PID> );
-		print $tmp;
-		if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
-			return $1;
+		if ( ! $self->{'run_local'}) {
+			system("rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out 2> /dev/null");
+			## I get the impression, that we should wait for say 1 sec here...
+			sleep(3);
+			open( PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
+			my $tmp = join( "", <PID> );
+			print $tmp;
+			if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
+				return $1;
+			}
+		}else {
+			##wow - OK I assume you want to test something here - right?
+			system( "bash $fm->{path}/$fm->{'filename_core'}.sh ");
 		}
 		return 1;
 	}
@@ -420,10 +428,12 @@ sub get_options_from_script {
 		open( IN, "<$filename" ) or die $!;
 		while (<IN>) {
 			if ( $_ =~ m/^#SBATCH \-+(\w+)\s+(.+)\s*\n/ ) {
-				$self->{$1} = $2 unless ( $ignore->{$1} );
+				print "get option $1 and value $2\n";
+				$self->{'options'}->add($1, $2 ) unless ( $ignore->{$1} );
 			}
 		}
 	}
+	warn ( $self->{'options'}->AsString() );
 	return $self;
 }
 
