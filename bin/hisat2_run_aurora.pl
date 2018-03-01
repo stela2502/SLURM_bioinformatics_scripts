@@ -86,7 +86,7 @@ my (
 	$help,     $debug,   $database,       @files,
 	$options,  @options, $dropDuplicates, $genome,
 	$coverage, $paired,  $fast_tmp,       $bigwigTracks,
-	$sra,      $outpath, $max_jobs,       $mapper_options
+	$sra,      $outpath, $max_jobs,      $justMapping,  $mapper_options
 );
 
 Getopt::Long::GetOptions(
@@ -102,6 +102,7 @@ Getopt::Long::GetOptions(
 	"-dropDuplicates"   => \$dropDuplicates,
 	"-mapper_options=s" => \$mapper_options,
 	"-fast_tmp=s"       => \$fast_tmp,
+	"-justMapping"      => \$justMapping,
 
 	"-help"  => \$help,
 	"-debug" => \$debug
@@ -185,6 +186,7 @@ $task_description .= " -mapper_options '$mapper_options'"
   if ( $mapper_options =~ m/\w/ );
 $task_description .= " -fast_tmp '$fast_tmp'" if ( $fast_tmp =~ m/\w/ );
 $task_description .= " -debug" if ($debug);
+$task_description .= " -justMapping" if ($justMapping);
 
 ## Do whatever you want!
 my $fm = root->filemap($bigwigTracks);
@@ -240,10 +242,10 @@ while ( scalar(@files) ) {
 	$cmd[1] .= &chk_cmd( create_picard_call($this_outfile) ) if ($dropDuplicates);
 	$cmd[1] .=
 	  &chk_cmd(
-		$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) );
+		$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) ) unless ( $justMapping );
 
 	$cmd[1] .=
-	  &chk_cmd( $BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) );
+	  &chk_cmd( $BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) ) unless ( $justMapping );
 	$tmp = $SLURM->run( \@cmd, $fm, $this_outfile );
 	$submitted++ if ( $tmp == 1 );
 	if ( $submitted >= $max_jobs ) {
