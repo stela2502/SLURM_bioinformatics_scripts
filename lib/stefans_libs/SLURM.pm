@@ -61,17 +61,22 @@ sub new {
 
 	my ( $class, $options, $clean ) = @_;
 
-	$clean = 1 unless ( defined $clean);
-	
+	$clean = 0 unless ( defined $clean );
+
 	my $self = {
-		'run_local' => 0,
+		'run_local'     => 0,
 		'SLURM_modules' => [],
 		'sub_SLURMS'    => [],
-		'options' => stefans_libs::flexible_data_structures::optionsFile->new({
-			'default_file' => File::Spec::Functions::catfile( File::HomeDir->home(), '.SLURM_options.txt' ), 
-			'required' => ['n', 'N', 't' ], 
-			'optional' => ['A','p', 'mail-user', 'mail-type', 'mem-per-cpu' ], 
-		}),
+		'options' => stefans_libs::flexible_data_structures::optionsFile->new(
+			{
+				'default_file' => File::Spec::Functions::catfile(
+					File::HomeDir->home(), '.SLURM_options.txt'
+				),
+				'required' => [ 'n', 'N', 't' ],
+				'optional' =>
+				  [ 'A', 'p', 'mail-user', 'mail-type', 'mem-per-cpu', 'w' ],
+			}
+		),
 	};
 
 	$self->{'debug'} ||= 0;
@@ -88,10 +93,10 @@ sub new {
 	my $name = $IN[0];
 	chomp($name);
 	$self->{'username'} = $name;
-	if ( $clean ){
+	if ($clean) {
 		$self->clean_slurm_options($options);
 	}
-	
+
 	return $self;
 }
 
@@ -106,20 +111,21 @@ sub options {
 	my ( $self, $options ) = @_;
 	if ( ref($options) eq "HASH" ) {
 		foreach my $key ( keys %$options ) {
-			$self->{'options'}->add($key, $options->{$key} );
+			$self->{'options'}->add( $key, $options->{$key} );
 		}
-		unless ( $self->{'options'}->OK()) {
+		unless ( $self->{'options'}->OK() ) {
 			$self->{'options'}->load();
 		}
 	}
-	
+
 	if ( defined $self->{'options'}->value('mail-user') ) {
-		$self->{'options'}->add('mail-type', 'END', 0 );
+		$self->{'options'}->add( 'mail-type', 'END', 0 );
 		my $OK = { map { $_ => 1 } 'BEGIN', 'END', 'FAIL', 'REQUEUE', 'ALL' };
-		unless ( $OK->{  $self->{'options'}->value('mail-type') } ) {
-			warn
-"option 'mail-type' ". $self->{'options'}->value('mail-type') ." is not supported - set to 'END'\n";
-			$self->{'options'}->add('mail-type', 'END', 1 );
+		unless ( $OK->{ $self->{'options'}->value('mail-type') } ) {
+			warn "option 'mail-type' "
+			  . $self->{'options'}->value('mail-type')
+			  . " is not supported - set to 'END'\n";
+			$self->{'options'}->add( 'mail-type', 'END', 1 );
 		}
 	}
 	return $self;
@@ -198,31 +204,42 @@ Creates a script file string like that:
 sub script {
 	my ( $self, $cmd, $name ) = @_;
 	&check( { cmd => $cmd, name => $name }, 'cmd', 'name' );
-	
-	#	$self->{'options'}->{'required'} => ['n', 'N', 't' ],
-	#	$self->{'options'}->{'optional'} => ['A','p', 'mail-user', 'mail-type', 'mem-per-cpu' ],
+
+#	$self->{'options'}->{'required'} => ['n', 'N', 't' ],
+#	$self->{'options'}->{'optional'} => ['A','p', 'mail-user', 'mail-type', 'mem-per-cpu' ],
 
 	$self->{'options'}->check();
-	
+
 	my $ret = '#! /bin/bash' . "\n";
-	
-	if ( $self->{'options'}->value('partitition') ) { # a hack if the script already uses p for something else
-		$self->{'options'}->add( 'p', $self->{'options'}->value('partitition'), 1);
-		$self->{'options'}->drop ( 'partitition' );
+
+	if ( $self->{'options'}->value('partitition') )
+	{    # a hack if the script already uses p for something else
+		$self->{'options'}
+		  ->add( 'p', $self->{'options'}->value('partitition'), 1 );
+		$self->{'options'}->drop('partitition');
 	}
 	elsif ( $self->{'options'}->value('A') =~ m/^lu/ )
-	{      ## add one for each partitition you want to explicitly support
-		$self->{'options'}->add( 'p', 'lu',1)
+	{    ## add one for each partitition you want to explicitly support
+		$self->{'options'}->add( 'p', 'lu', 1 );
+	}
+	if ( $self->{'options'}->value('w') ) {    ## that is a special one
+		$ret .= "#SBATCH -w, --" . $self->{'options'}->value('w') . "\n";
 	}
 	my $tmp;
-	foreach my $option ( @{ $self->{'options'}->{'required'} }, @{ $self->{'options'}->{'optional'} }) {
+	foreach my $option (
+		@{ $self->{'options'}->{'required'} },
+		@{ $self->{'options'}->{'optional'} }
+	  )
+	{
 #		if ($option eq "A" ) {
 #			Carp::confess ( "I got the option 'A': ".$self->{'options'}->value($option)."\n");
 #		}
 		next unless ( defined $self->{'options'}->value($option) );
+		next if ( $option eq "w" );    #special one processed earlier
 		$tmp = "-";
 		$tmp = '--' if ( length($option) > 1 );
-		$ret .= "#SBATCH $tmp$option ".$self->{'options'}->value($option)."\n";
+		$ret .=
+		  "#SBATCH $tmp$option " . $self->{'options'}->value($option) . "\n";
 
 	}
 	$ret .= join( "\n",
@@ -329,7 +346,25 @@ The script will be created in $fm->{path} and run using SBATCH if the debug valu
 
 =cut
 
-sub run {
+sub run{
+	my ( $self, $cmd, $fm, $ofile ) = @_;
+	if ( defined $ofile) {
+		unless ( -f $ofile) {
+			return $self->run_notest($cmd, $fm );
+		}
+		else {
+			if ( ref($fm) eq "HASH") {
+				$fm = $fm->{'total'};
+			}
+			warn "outfile was present ($ofile), script not run.\n";
+		}
+	}else {
+		return $self->run_notest($cmd, $fm );
+	}
+	return 1;
+}
+
+sub run_notest {
 	my ( $self, $cmd, $fm ) = @_;
 
 	unless ( ref($fm) eq "HASH" ) {
@@ -345,27 +380,38 @@ sub run {
 	my @ALL = split( "\n", $cmd );
 	my @OK = grep( !/^#/, @ALL );
 	@OK = grep ( !/^\s*$/, @OK );
+	@OK = grep ( !/^module/, @OK ); ## the module load lines should also not make the script run.
 
 	if ( @OK > 0 and !$self->{'debug'} ) {
 
 #	print "test if I am allowed to submitt the job: ($self->{'partitition'},$self->{'max_jobs'}) ".$self-> in_pipeline()." >= $self->{'max_jobs'}?\n";
-		if ( $self->in_pipeline() >= $self->{'max_jobs'} ) {
-			$self->wait_for_last_finished();
-		}
-		print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
-		if ( ! $self->{'run_local'}) {
-			system("rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out 2> /dev/null");
+		unless ( $self->{'run_local'} ) {
+
+			if ( $self->in_pipeline() >= $self->{'max_jobs'} ) {
+				$self->wait_for_last_finished();
+			}
+			print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
+
+			system(
+"rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out 2> /dev/null"
+			);
 			## I get the impression, that we should wait for say 1 sec here...
-			sleep(3);
+			#sleep(3);
 			open( PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
 			my $tmp = join( "", <PID> );
 			print $tmp;
 			if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
 				return $1;
 			}
-		}else {
+		}
+		else {
 			##wow - OK I assume you want to test something here - right?
-			system( "bash $fm->{path}/$fm->{'filename_core'}.sh ");
+			system(
+"rm $fm->{'filename_core'}_local*.err $fm->{'filename_core'}_local*.out 2> /dev/null"
+			);
+			system("bash $fm->{path}/$fm->{'filename_core'}.sh"
+			  . " 1>$fm->{path}/$fm->{'filename_core'}.local.$$.out"
+			  . " 2>$fm->{path}/$fm->{'filename_core'}.local.$$.err");
 		}
 		return 1;
 	}
@@ -394,7 +440,7 @@ sub check_4_outfile {
 	  unless ( defined $outfiles[0] );
 	foreach my $outfile (@outfiles) {
 		if ( -f $outfile ) {
-			warn "outfile '$outfile' is present - I will not re-create it!\n";
+			warn "outfile '$outfile' is present - I will not re-create it!\n" if ( $self->{'debug'} );
 			$cmd = "#$cmd";
 			last;
 		}
@@ -429,11 +475,11 @@ sub get_options_from_script {
 		while (<IN>) {
 			if ( $_ =~ m/^#SBATCH \-+(\w+)\s+(.+)\s*\n/ ) {
 				print "get option $1 and value $2\n";
-				$self->{'options'}->add($1, $2 ) unless ( $ignore->{$1} );
+				$self->{'options'}->add( $1, $2 ) unless ( $ignore->{$1} );
 			}
 		}
 	}
-	warn ( $self->{'options'}->AsString() );
+	warn( $self->{'options'}->AsString() );
 	return $self;
 }
 

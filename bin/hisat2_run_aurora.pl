@@ -83,7 +83,7 @@ my $dir = getcwd . "/";
 my $VERSION = 'v1.0';
 
 my (
-	$help,     $debug,   $database,       @files,
+	$help,     $debug,   $database,       @files,$local,
 	$options,  @options, $dropDuplicates, $genome,
 	$coverage, $paired,  $fast_tmp,       $bigwigTracks,
 	$sra,      $outpath, $max_jobs,      $justMapping,  $mapper_options
@@ -103,6 +103,7 @@ Getopt::Long::GetOptions(
 	"-mapper_options=s" => \$mapper_options,
 	"-fast_tmp=s"       => \$fast_tmp,
 	"-justMapping"      => \$justMapping,
+	"-local"           =>  \$local,
 
 	"-help"  => \$help,
 	"-debug" => \$debug
@@ -187,6 +188,7 @@ $task_description .= " -mapper_options '$mapper_options'"
 $task_description .= " -fast_tmp '$fast_tmp'" if ( $fast_tmp =~ m/\w/ );
 $task_description .= " -debug" if ($debug);
 $task_description .= " -justMapping" if ($justMapping);
+$task_description .= " -local" if ($local);
 
 ## Do whatever you want!
 my $fm = root->filemap($bigwigTracks);
@@ -203,6 +205,7 @@ my ( @cmd, @big_wig_urls, $tmp, $this_outfile );
 
 my $SLURM = stefans_libs::SLURM->new($options, 0);
 $SLURM->{'debug'} = 1 if ($debug);
+$SLURM->{'run_local'} = 1 if ( $local);
 
 ## kick all SLURM options that should not be used for the hisat run
 foreach (qw(n N t mem)) {

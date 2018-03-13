@@ -52,80 +52,79 @@ my $plugin_path = "$FindBin::Bin";
 
 my $VERSION = 'v1.0';
 
-
-my ( $help, $debug, $database, $uname, $start, $stop);
+my ( $help, $debug, $database, $uname, $start, $stop );
 
 Getopt::Long::GetOptions(
-	 "-uname=s"    => \$uname,
-       "-start=s"    => \$start,
-       "-stop=s"    => \$stop,
+	"-uname=s" => \$uname,
+	"-start=s" => \$start,
+	"-stop=s"  => \$stop,
 
-	 "-help"             => \$help,
-	 "-debug"            => \$debug
+	"-help"  => \$help,
+	"-debug" => \$debug
 );
 
-my $warn = '';
+my $warn  = '';
 my $error = '';
 
-if (! defined $uname and !defined $start) {
+if ( !defined $uname ) {
 	$error .= "the cmd line switch -uname is undefined!\n";
-}
-if ( ! defined $start and ! defined $uname) {
-	$error .= "the cmd line switch -start is undefined!\n";
-}
-unless ( defined $stop and ! defined $uname) {
-	$error .= "the cmd line switch -stop is undefined!\n";
+	if ( defined $start and defined $stop ) {
+		$error = "";
+	}
 }
 
 # start - no checks necessary
 # stop - no checks necessary
 
-
-if ( $help ){
-	print helpString( ) ;
+if ($help) {
+	print helpString();
 	exit;
 }
 
-if ( $error =~ m/\w/ ){
-	helpString($error ) ;
+if ( $error =~ m/\w/ ) {
+	helpString($error);
 	exit;
 }
 
 sub helpString {
 	my $errorMessage = shift;
-	$errorMessage = ' ' unless ( defined $errorMessage); 
+	$errorMessage = ' ' unless ( defined $errorMessage );
 	print "$errorMessage.\n";
-	pod2usage(q(-verbose) => 1);
+	pod2usage( q(-verbose) => 1 );
 }
 
+my ($task_description);
 
-
-my ( $task_description);
-
-$task_description .= 'perl '.$plugin_path .'/chancel_all_slurm_jobs.pl';
-$task_description .= " -uname '$uname'" if (defined $uname);
-$task_description .= " -start " if (defined $start);
-$task_description .= " -stop " if (defined $stop);
-
-
-
+$task_description .= 'perl ' . $plugin_path . '/chancel_all_slurm_jobs.pl';
+$task_description .= " -uname '$uname'" if ( defined $uname );
+$task_description .= " -start " if ( defined $start );
+$task_description .= " -stop " if ( defined $stop );
 
 ## Do whatever you want!
 
-if ( defined $start and defined $stop ) {
-	foreach  my $i ($start..$stop) {
-		print  "scancel $i\n";
-		unless ($debug) {
-		#	system( "scancel $i" )
-		}
+open( IN, " squeue -u $uname |" );
+my (@tmp, $min, $max,  $ip );
+$min = 1e+9; 
+$max = 0;
+while (<IN>) {
+	$_ =~ s/^\s*//;
+	chomp;
+	if ($_ =~ m/^(\d+) / ){
+		$ip = $1; 
+		push ( @tmp, $ip);
+		$max = $ip if ( $max < $ip );
+		$min = $ip if ( $min > $ip );
 	}
 }
-else {
-	open (IN, " squeue -u |");
-	my @tmp;
-	while ( <IN> ) {
-		$_ =~s/^\s*//;
-		@tmp= split(/\s+/,$_);
-		print  "scancel $tmp[0]\n";
+
+close ( IN );
+
+$start ||=$min;
+$stop ||= $max;
+
+foreach $ip ( @tmp ) {
+	if ( $ip >= $start and $ip <= $stop ){
+		print "scancel $ip\n" ;
+		system ( "scancel $ip") unless ( $debug );
 	}
 }
