@@ -87,6 +87,7 @@ my (
 	$options,  @options, $dropDuplicates, $genome,
 	$coverage, $paired,  $fast_tmp,       $bigwigTracks,
 	$sra,      $outpath, $max_jobs,      $justMapping,  $mapper_options
+	$local,
 );
 
 Getopt::Long::GetOptions(
@@ -173,6 +174,7 @@ my ( $task_description, $mainOutpath );
 $task_description .= 'perl ' . $plugin_path . '/hisat2_run_aurora.pl';
 $task_description .= ' -files "' . join( '" "', @files ) . '"'
   if ( defined $files[0] );
+$task_description .= ' -local ' if ($local); 
 $task_description .= ' -options "' . join( '" "', @options ) . '"'
   if ( defined $options[0] );
 $task_description .= " -genome '$genome'"     if ( defined $genome );
@@ -214,6 +216,7 @@ foreach (qw(n N t mem)) {
 
 $fm = root->filemap( $files[0] );
 
+unless ( $local ){
 $SLURM->{'SLURM_modules'} = [
 	'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
 	'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'SAMtools/1.3.1',
@@ -222,15 +225,17 @@ $SLURM->{'SLURM_modules'} = [
 
 	#	stefans_libs::scripts::BAM->SLURUM_load(),
 ];
+}
 
 $tmp                    = $SLURM->define_Subscript();
 $tmp->{'purge'}         = 1;
+unless ( $local ){
 $tmp->{'SLURM_modules'} = [
 	'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
 	'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'BEDTools/2.25.0',
 	'Java/1.8.0_72', 'picard/2.8.2', 'ucsc-tools/R2016a',
 ];
-
+}
 my $BAM = stefans_libs::scripts::BAM->new($options);
 
 @files = map { $_ =~ s/^\.\///; $_ } @files;
@@ -276,8 +281,12 @@ sub create_picard_call {
 	my $fm     = root->filemap($file);
 	my $p      = $outpath;
 	$p ||= "$fm->{'path'}/";
+	my $cmd = "picard";
+	if ( $local) {
+		$cmd = "picard-tools";
+	}
 	my $s =
-	    "picard MarkDuplicates INPUT="
+	    "$cmd MarkDuplicates INPUT="
 	  . $fm->{'total'}
 	  . " OUTPUT="
 	  . "$p$fm->{'filename_core'}_picard_deduplicated.bam"
@@ -298,8 +307,8 @@ sub create_call {
 	$fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
 	unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
 	my $s =
-"hisat2 $mapper_options -x $genome -U $fm->{'total'} --threads $options->{proc} --add-chrname > \$SNIC_TMP/$fm->{'filename_core'}_hisat.sam\n";
-	return $s, "\$SNIC_TMP/$fm->{'filename_core'}_hisat.sam",
+"hisat2 $mapper_options -x $genome -U $fm->{'total'} --threads $options->{proc} --add-chrname > $fast_tmp/$fm->{'filename_core'}_hisat.sam\n";
+	return $s, "$fast_tmp/$fm->{'filename_core'}_hisat.sam",
 	  "$p/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
@@ -313,8 +322,8 @@ sub create_sra_call {
 	$fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
 	unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
 	my $s =
-"hisat2 $mapper_options -x $genome --sra-acc $fm->{'total'} --threads $options->{proc} --add-chrname > \$SNIC_TMP/$fm->{'filename_core'}_hisat.sam\n";
-	return $s, "\$SNIC_TMP/$fm->{'filename_core'}_hisat.sam",
+"hisat2 $mapper_options -x $genome --sra-acc $fm->{'total'} --threads $options->{proc} --add-chrname > $fast_tmp/$fm->{'filename_core'}_hisat.sam\n";
+	return $s, "$fast_tmp/$fm->{'filename_core'}_hisat.sam",
 	  "$p/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 
@@ -333,8 +342,8 @@ sub create_paired_call {
 	mkdir("$p/") unless ( -d "$p/" );
 	unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
 	my $s =
-"hisat2 $mapper_options -x $genome -1 $fm->{'total'} -2 $fm2->{'total'} --threads $options->{proc} --add-chrname > \$SNIC_TMP/$fm->{'filename_core'}_hisat.sam\n";
-	return $s, "\$SNIC_TMP/$fm->{'filename_core'}_hisat.sam",
+"hisat2 $mapper_options -x $genome -1 $fm->{'total'} -2 $fm2->{'total'} --threads $options->{proc} --add-chrname > $fast_tmp/$fm->{'filename_core'}_hisat.sam\n";
+	return $s, "$fast_tmp/$fm->{'filename_core'}_hisat.sam",
 	  "$p/$fm->{'filename_core'}_hisat.sorted.bam";
 }
 

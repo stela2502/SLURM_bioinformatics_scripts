@@ -65,6 +65,7 @@ sub new {
 
 	my $self = {
 		'run_local'     => 0,
+		'shell' => 'bash',
 		'SLURM_modules' => [],
 		'sub_SLURMS'    => [],
 		'options' => stefans_libs::flexible_data_structures::optionsFile->new(
@@ -142,6 +143,7 @@ sub wait_for_last_finished {
 
 sub pids_finished {
 	my ( $self, @pids ) = @_;
+	return 1 if ( $self->{'local'} );
 	return 1 unless (@pids);
 	my $cmd = "squeue -u $self->{'username'} |";
 	open( IN, $cmd ) or die $!;
@@ -162,6 +164,7 @@ sub pids_finished {
 sub in_pipeline {
 	my $self   = shift;
 	my $select = shift;
+	return 0 if ( $self->{'local'} );
 
 	#print "squeue -u $self->{'username'}\n";
 	open( IN, "squeue -u $self->{'username'} |" ) or die $!;
@@ -288,6 +291,7 @@ sub load_R_x11 {
 
 sub load_SLURM_modules {
 	my ( $self, @modules ) = @_;
+	return '' if ( $self->{'local'} );
 	my $loaded;
 	if ( !$self->{'purge'} ) {
 		system("bash -c 'module list 2> /tmp/modulelist.tmp'");
@@ -383,6 +387,13 @@ sub run_notest {
 	@OK = grep ( !/^module/, @OK ); ## the module load lines should also not make the script run.
 
 	if ( @OK > 0 and !$self->{'debug'} ) {
+		if ( $self->{'local'} ) {
+			## add a local stdout and stderr file like slurm does.
+			system( $self->{'shell'}
+				  . " $fm->{path}/$fm->{'filename_core'}.sh 2> $fm->{path}/$fm->{'filename_core'}.stderr > $fm->{path}/$fm->{'filename_core'}.stdout " );
+			return 1;
+		}
+		else {           ## use slurm pipeline
 
 #	print "test if I am allowed to submitt the job: ($self->{'partitition'},$self->{'max_jobs'}) ".$self-> in_pipeline()." >= $self->{'max_jobs'}?\n";
 		unless ( $self->{'run_local'} ) {
@@ -397,6 +408,8 @@ sub run_notest {
 			);
 			## I get the impression, that we should wait for say 1 sec here...
 			#sleep(3);
+			system(
+				"rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out");
 			open( PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
 			my $tmp = join( "", <PID> );
 			print $tmp;
@@ -412,8 +425,8 @@ sub run_notest {
 			system("bash $fm->{path}/$fm->{'filename_core'}.sh"
 			  . " 1>$fm->{path}/$fm->{'filename_core'}.local.$$.out"
 			  . " 2>$fm->{path}/$fm->{'filename_core'}.local.$$.err");
+			return 1;
 		}
-		return 1;
 	}
 	elsif ( @OK == 0 ) {
 		print
