@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 6;
+use Test::More tests => 10;
 BEGIN { use_ok 'stefans_libs::SLURM' }
 
 use FindBin;

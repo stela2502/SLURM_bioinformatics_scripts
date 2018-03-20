@@ -18,12 +18,13 @@ is_deeply( ref($SLURM), 'stefans_libs::SLURM',
 
 my $module_str = $SLURM->load_SLURM_modules( 'GCC/4.9.3-2.25','OpenMPI/1.10.2', 'BEDTools/2.25.0', 'SAMtools/0.1.19');
 
-$exp = "module load GCC/4.9.3-2.25 OpenMPI/1.10.2 BEDTools/2.25.0 SAMtools/0.1.19 ";
+$exp = "module load BEDTools/2.25.0 SAMtools/0.1.19 ";
 ok ($module_str eq  $exp, "module string created as expected '$module_str'\n");
 
 @values = split( "\n",$SLURM->script( 'touch nothingatall.txt', 'useless' ));
 
 $exp=["#! /bin/bash",
+'#SBATCH -w, ----nodelist=ls2-n3',
 "#SBATCH -n 2",
 "#SBATCH -N 1",
 "#SBATCH -t 01:00:00",
