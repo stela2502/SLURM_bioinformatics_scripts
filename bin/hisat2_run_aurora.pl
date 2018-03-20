@@ -235,10 +235,15 @@ my $BAM = stefans_libs::scripts::BAM->new($options);
 
 @files = map { $_ =~ s/^\.\///; $_ } @files;
 my $submitted = 0;
+my @jobs;
+
+## create the jobs to sort them by file size later on ;-)
 
 while ( scalar(@files) ) {
-	$fm = root->filemap( $files[0] )
+	my $fm = root->filemap( $files[0] )
 	  ;    ## the files will be depleted by the create_call function!
+	  my @cmd;
+	  my $this_outfile;
 	$cmd[0] = &chk_cmd( &create_call() );
 	$cmd[0] .=
 	  &chk_cmd( $BAM->convert_sam_2_sorted_bam( $this_outfile, $mainOutpath ) );
@@ -249,11 +254,15 @@ while ( scalar(@files) ) {
 
 	$cmd[1] .=
 	  &chk_cmd( $BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) ) unless ( $justMapping );
-	$tmp = $SLURM->run( \@cmd, $fm, $this_outfile );
+	
+	push (@jobs, { 'outfile' => $this_outfile, 'cmd' => [ @cmd ], 'fm' => $fm } );
+}
+foreach my $job ( @jobs[&FileSizeOrder(@jobs)] ){
+	my $tmp = $SLURM->run( $job->{'cmd'}, $job->{'fm,'}, $job->{'this_outfile'} );
 	$submitted++ if ( $tmp == 1 );
 	if ( $submitted >= $max_jobs ) {
 		$submitted -= 50;
-		$SLURM->wait_for_last_finished($this_outfile);
+		$SLURM->wait_for_last_finished($job->{'this_outfile'});
 	}
 }
 
@@ -270,6 +279,22 @@ if ( @{ $BAM->{'big_wig_urls'} } > 0 ) {
 }
 
 print "Done\n";
+
+sub byFileSize {
+	-s $b->{'fm'}->{'total'} <=> -s $a->{'fm'}->{'total'};
+}
+
+
+sub FileSizeOrder {
+	my @files = @_;
+	my $i = 0;
+	my $order = { map { $_->{'fm'}->{'total'} => $i ++ }  @files  } ; 
+	my @ret;
+	foreach ( sort byFileSize @files ) {
+		push( @ret, $order->{$_->{'fm'}->{'total'}});
+	}
+	return @ret;
+}
 
 sub create_picard_call {
 	my ($file) = @_;
