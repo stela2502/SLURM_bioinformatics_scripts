@@ -65,7 +65,7 @@ sub new {
 
 	my $self = {
 		'run_local'     => 0,
-		'shell' => 'bash',
+		'shell'         => 'bash',
 		'SLURM_modules' => [],
 		'sub_SLURMS'    => [],
 		'options' => stefans_libs::flexible_data_structures::optionsFile->new(
@@ -350,20 +350,21 @@ The script will be created in $fm->{path} and run using SBATCH if the debug valu
 
 =cut
 
-sub run{
+sub run {
 	my ( $self, $cmd, $fm, $ofile ) = @_;
-	if ( defined $ofile) {
-		unless ( -f $ofile) {
-			return $self->run_notest($cmd, $fm );
+	if ( defined $ofile ) {
+		unless ( -f $ofile ) {
+			return $self->run_notest( $cmd, $fm );
 		}
 		else {
-			if ( ref($fm) eq "HASH") {
+			if ( ref($fm) eq "HASH" ) {
 				$fm = $fm->{'total'};
 			}
 			warn "outfile was present ($ofile), script not run.\n";
 		}
-	}else {
-		return $self->run_notest($cmd, $fm );
+	}
+	else {
+		return $self->run_notest( $cmd, $fm );
 	}
 	return 1;
 }
@@ -383,20 +384,22 @@ sub run_notest {
 	close(OUT);
 	my @ALL = split( "\n", $cmd );
 	my @OK = grep( !/^#/, @ALL );
-	@OK = grep ( !/^\s*$/, @OK );
-	@OK = grep ( !/^module/, @OK ); ## the module load lines should also not make the script run.
+	@OK = grep ( !/^\s*$/,   @OK );
+	@OK = grep ( !/^module/, @OK )
+	  ;    ## the module load lines should also not make the script run.
 
 	if ( @OK > 0 and !$self->{'debug'} ) {
 		if ( $self->{'local'} ) {
 			## add a local stdout and stderr file like slurm does.
 			system( $self->{'shell'}
-				  . " $fm->{path}/$fm->{'filename_core'}.sh 2> $fm->{path}/$fm->{'filename_core'}.stderr > $fm->{path}/$fm->{'filename_core'}.stdout " );
+				  . " $fm->{path}/$fm->{'filename_core'}.sh "
+				  . "2> $fm->{path}/$fm->{'filename_core'}.stderr "
+				  . " > $fm->{path}/$fm->{'filename_core'}.stdout " );
 			return 1;
 		}
-		else {           ## use slurm pipeline
+		else {    ## use slurm pipeline
 
 #	print "test if I am allowed to submitt the job: ($self->{'partitition'},$self->{'max_jobs'}) ".$self-> in_pipeline()." >= $self->{'max_jobs'}?\n";
-		unless ( $self->{'run_local'} ) {
 
 			if ( $self->in_pipeline() >= $self->{'max_jobs'} ) {
 				$self->wait_for_last_finished();
@@ -416,16 +419,6 @@ sub run_notest {
 			if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
 				return $1;
 			}
-		}
-		else {
-			##wow - OK I assume you want to test something here - right?
-			system(
-"rm $fm->{'filename_core'}_local*.err $fm->{'filename_core'}_local*.out 2> /dev/null"
-			);
-			system("bash $fm->{path}/$fm->{'filename_core'}.sh"
-			  . " 1>$fm->{path}/$fm->{'filename_core'}.local.$$.out"
-			  . " 2>$fm->{path}/$fm->{'filename_core'}.local.$$.err");
-			return 1;
 		}
 	}
 	elsif ( @OK == 0 ) {
@@ -453,7 +446,8 @@ sub check_4_outfile {
 	  unless ( defined $outfiles[0] );
 	foreach my $outfile (@outfiles) {
 		if ( -f $outfile ) {
-			warn "outfile '$outfile' is present - I will not re-create it!\n" if ( $self->{'debug'} );
+			warn "outfile '$outfile' is present - I will not re-create it!\n"
+			  if ( $self->{'debug'} );
 			$cmd = "#$cmd";
 			last;
 		}
@@ -469,7 +463,9 @@ sub check {
 		$type = 'SLURM';
 	}
 	map {
-		unless ( defined $self->{$_} ) { $error .= "MISSING $type option $_\n" }
+		unless ( defined $self->{$_} ) {
+			$error .= "MISSING $type option $_\n";
+		}
 	} @require;
 
 	Carp::confess($error) if ( $error =~ m/\w/ );
