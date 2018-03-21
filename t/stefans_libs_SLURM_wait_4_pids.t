@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 4;
+use Test::More tests => 6;
 BEGIN { use_ok 'stefans_libs::SLURM' }
 
 use FindBin;
@@ -34,13 +34,33 @@ for ( my $i = 1; $i < 11; $i ++) {
 
 is_deeply( scalar(@values), 10, "I got 10 ip's back?");
 
+is_deeply($SLURM->in_pipeline(), 10, "10 scripts unfinished" );
+
 while( ! $SLURM->pids_finished (@values )) {
-	print "sleep for 1 sec\n";
-	sleep( 1 );
+	print "sleep for 6 sec\n";
+	sleep( 6 );
 }
 
 my $duration = time - $start;
 
 ok ( $duration > 10, "more than 10 sec for the whole waiting: $duration sec\n" );
 
+## OK now try to make me wait for the finish of say 5 before I am allowed to issue the next 5:
+$SLURM->{'max_jobs'} = 5;
+$SLURM->{'sleep_sec'} = 1;
+
+$start = time;
+@values = ();
+
+for ( my $i = 1; $i < 11; $i ++) {
+	push(@values, $SLURM->run( $cmd, "$outpath/script_$i.sh" ) );
+}
+
+print "Waiting in the test script\n";
+while( ! $SLURM->pids_finished (@values )) {
+	print "sleep for 6 sec\n";
+	sleep( 6 );
+}
+$duration = time - $start;
+ok ( $duration > 20, "more than 20 sec for the whole waiting: $duration sec\n" );
 

@@ -97,7 +97,7 @@ sub new {
 	if ($clean) {
 		$self->clean_slurm_options($options);
 	}
-
+	$self->{'sleep_sec'} ||= 10;  ## per default sleep 10 sec between any check.
 	return $self;
 }
 
@@ -137,7 +137,7 @@ sub wait_for_last_finished {
 	my $wait;
 	while ( $wait = $self->in_pipeline('PD') > 4 ) {
 		warn "waiting for $wait processes\n";
-		sleep(50);
+		sleep( $self->{'sleep_sec'} );
 	}
 }
 
@@ -178,12 +178,11 @@ sub in_pipeline {
 
 		#print scalar(@IN)." jobs in partitcion $self->{'partitition'}\n";
 	}
-	else {
-		@IN = grep( /\ssnic\s/, @IN );
-	}
 	if ($select) {
 		return scalar( grep ( /\s$select\s/, @IN ) );
 	}
+
+	#print join("", @IN );
 	## all
 	return scalar(@IN) - 1;
 }
@@ -369,6 +368,28 @@ sub run {
 	return 1;
 }
 
+sub get_files_from_path {
+	my ( $self, $path, @matches ) = @_;
+	opendir( DIR, $path )
+	  or die "I could not read from the directory '$path'\n$!\n";
+	my @dat = grep { !/^\./ } readdir(DIR);
+	closedir(DIR);
+
+	#print "I get files from path '$path'\n";
+	my @ret;
+	foreach my $select (@matches) {
+
+		#print "I select all files matching '$select'\n"
+		# . join( "\n", @dat ) . "\n";
+		push(@ret, grep { /$select/ } @dat);
+
+		#print "Still in the game:" . join( "\n", @ret ) . "\n\n";
+	}
+	#print "selected:\n" . join( "\n", @ret ) . "\n\n";
+	@ret = map { "$path/$_" } @ret;
+	return @ret;
+}
+
 sub run_notest {
 	my ( $self, $cmd, $fm ) = @_;
 
@@ -400,23 +421,27 @@ sub run_notest {
 		else {    ## use slurm pipeline
 
 #	print "test if I am allowed to submitt the job: ($self->{'partitition'},$self->{'max_jobs'}) ".$self-> in_pipeline()." >= $self->{'max_jobs'}?\n";
-
 			if ( $self->in_pipeline() >= $self->{'max_jobs'} ) {
-				$self->wait_for_last_finished();
+				print
+"More than $self->{'max_jobs'} jobs in the pipeline - waiting:\n";
+				local $| = 1;
+				while ( $self->in_pipeline() >= $self->{'max_jobs'} ) {
+					print ".";
+					sleep( $self->{'sleep_sec'} );
+				}
+				print "\n";
 			}
 			print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
-
-			system(
-"rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out 2> /dev/null"
-			);
-			## I get the impression, that we should wait for say 1 sec here...
-			#sleep(3);
-			system(
-				"rm $fm->{'filename_core'}*.err $fm->{'filename_core'}*.out");
+			map { unlink($_) }
+			  $self->get_files_from_path( './', "$fm->{'filename_core'}\\d*.err",
+				"$fm->{'filename_core'}\\d*.out" );
+			
 			open( PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
 			my $tmp = join( "", <PID> );
-			print $tmp;
+
+			#print $tmp;
 			if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
+				print "Submitted batch job '$1'\n";
 				return $1;
 			}
 		}
