@@ -268,7 +268,7 @@ while ( scalar(@files) ) {
 }
 
 foreach my $job ( @jobs[ &FileSizeOrder(@jobs) ] ) {
-	print "\$exp = " . root->print_perl_var_def($job) . ";\n";
+	#print "\$exp = " . root->print_perl_var_def($job) . ";\n";
 	my $tmp = $SLURM->run( $job->{'cmd'}, $job->{'fm'}, $job->{'outfile'} );
 	$submitted++ if ( $tmp == 1 );
 	if ( $submitted >= $max_jobs ) {

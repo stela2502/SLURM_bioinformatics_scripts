@@ -308,9 +308,9 @@ sub load_SLURM_modules {
 		}
 		close(IN);
 		unlink("/tmp/modulelist.tmp");
-		print "Hope there is some loaded module?: "
-		  . root->print_perl_var_def($loaded)
-		  if ( $self->{debug} );
+#		print "Hope there is some loaded module?: "
+#		  . root->print_perl_var_def($loaded)
+#		  if ( $self->{debug} );
 
 	}
 	else {
