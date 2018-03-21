@@ -83,11 +83,11 @@ my $dir = getcwd . "/";
 my $VERSION = 'v1.0';
 
 my (
-	$help,     $debug,   $database,       @files,$local,
-	$options,  @options, $dropDuplicates, $genome,
-	$coverage, $paired,  $fast_tmp,       $bigwigTracks,
-	$sra,      $outpath, $max_jobs,      $justMapping,  $mapper_options
-	$local,
+	$help,         $debug,    $database, @files,
+	$local,        $options,  @options,  $dropDuplicates,
+	$genome,       $coverage, $paired,   $fast_tmp,
+	$bigwigTracks, $sra,      $outpath,  $max_jobs,
+	$justMapping,  $mapper_options,
 );
 
 Getopt::Long::GetOptions(
@@ -104,7 +104,7 @@ Getopt::Long::GetOptions(
 	"-mapper_options=s" => \$mapper_options,
 	"-fast_tmp=s"       => \$fast_tmp,
 	"-justMapping"      => \$justMapping,
-	"-local"           =>  \$local,
+	"-local"            => \$local,
 
 	"-help"  => \$help,
 	"-debug" => \$debug
@@ -165,7 +165,7 @@ $options->{'n'}    ||= 10;
 $options->{'N'}    ||= 1;
 $options->{'t'}    ||= '02:00:00';
 $options->{'proc'} ||= $options->{'n'} * $options->{'N'};
-$options->{'p'}    ||= $options->{'proc'};
+#$options->{'p'}    ||= $options->{'proc'};
 
 ###
 
@@ -174,7 +174,7 @@ my ( $task_description, $mainOutpath );
 $task_description .= 'perl ' . $plugin_path . '/hisat2_run_aurora.pl';
 $task_description .= ' -files "' . join( '" "', @files ) . '"'
   if ( defined $files[0] );
-$task_description .= ' -local ' if ($local); 
+$task_description .= ' -local ' if ($local);
 $task_description .= ' -options "' . join( '" "', @options ) . '"'
   if ( defined $options[0] );
 $task_description .= " -genome '$genome'"     if ( defined $genome );
@@ -188,9 +188,8 @@ $task_description .= " -max_jobs $max_jobs";
 $task_description .= " -mapper_options '$mapper_options'"
   if ( $mapper_options =~ m/\w/ );
 $task_description .= " -fast_tmp '$fast_tmp'" if ( $fast_tmp =~ m/\w/ );
-$task_description .= " -debug" if ($debug);
-$task_description .= " -justMapping" if ($justMapping);
-$task_description .= " -local" if ($local);
+$task_description .= " -debug"                if ($debug);
+$task_description .= " -justMapping"          if ($justMapping);
 
 ## Do whatever you want!
 my $fm = root->filemap($bigwigTracks);
@@ -205,9 +204,12 @@ close(LOG);
 
 my ( @cmd, @big_wig_urls, $tmp, $this_outfile );
 
-my $SLURM = stefans_libs::SLURM->new($options, 0);
+my $SLURM = stefans_libs::SLURM->new( $options, 0 );
 $SLURM->{'debug'} = 1 if ($debug);
-$SLURM->{'run_local'} = 1 if ( $local);
+$SLURM->{'local'} = 1 if ($local);
+
+my $BAM = stefans_libs::scripts::BAM->new($options);
+$BAM->{'p'} = $options->{'n'};
 
 ## kick all SLURM options that should not be used for the hisat run
 foreach (qw(n N t mem)) {
@@ -216,27 +218,27 @@ foreach (qw(n N t mem)) {
 
 $fm = root->filemap( $files[0] );
 
-unless ( $local ){
-$SLURM->{'SLURM_modules'} = [
-	'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
-	'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'SAMtools/1.3.1',
-	'HISAT2/2.0.4',
-	'BEDTools/2.25.0', 'Java/1.8.0_72', 'ucsc-tools/R2016a',
+unless ($local) {
+	$SLURM->{'SLURM_modules'} = [
+		'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
+		'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'SAMtools/1.3.1',
+		'HISAT2/2.0.4',
+		'BEDTools/2.25.0', 'Java/1.8.0_72', 'ucsc-tools/R2016a',
 
-	#	stefans_libs::scripts::BAM->SLURUM_load(),
-];
+		#	stefans_libs::scripts::BAM->SLURUM_load(),
+	];
 }
 
-$tmp                    = $SLURM->define_Subscript();
-$tmp->{'purge'}         = 1;
-unless ( $local ){
-$tmp->{'SLURM_modules'} = [
-	'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
-	'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'BEDTools/2.25.0',
-	'Java/1.8.0_72', 'picard/2.8.2', 'ucsc-tools/R2016a',
-];
+$tmp = $SLURM->define_Subscript();
+$tmp->{'purge'} = 1;
+unless ($local) {
+	$tmp->{'SLURM_modules'} = [
+		'GCC/4.9.3-2.25',                'OpenMPI/1.10.2',
+		'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150',
+		'BEDTools/2.25.0',               'Java/1.8.0_72',
+		'picard/2.8.2',                  'ucsc-tools/R2016a',
+	];
 }
-my $BAM = stefans_libs::scripts::BAM->new($options);
 
 @files = map { $_ =~ s/^\.\///; $_ } @files;
 my $submitted = 0;
@@ -247,27 +249,31 @@ my @jobs;
 while ( scalar(@files) ) {
 	my $fm = root->filemap( $files[0] )
 	  ;    ## the files will be depleted by the create_call function!
-	  my @cmd;
-	  my $this_outfile;
+	my @cmd;
 	$cmd[0] = &chk_cmd( &create_call() );
 	$cmd[0] .=
 	  &chk_cmd( $BAM->convert_sam_2_sorted_bam( $this_outfile, $mainOutpath ) );
-	$cmd[1] .= &chk_cmd( create_picard_call($this_outfile) ) if ($dropDuplicates);
+	$cmd[1] .= &chk_cmd( create_picard_call($this_outfile) )
+	  if ($dropDuplicates);
 	$cmd[1] .=
 	  &chk_cmd(
-		$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) ) unless ( $justMapping );
+		$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) )
+	  unless ($justMapping);
 
 	$cmd[1] .=
-	  &chk_cmd( $BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) ) unless ( $justMapping );
-	
-	push (@jobs, { 'outfile' => $this_outfile, 'cmd' => [ @cmd ], 'fm' => $fm } );
+	  &chk_cmd( $BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) )
+	  unless ($justMapping);
+
+	push( @jobs, { 'outfile' => "$this_outfile", 'cmd' => [@cmd], 'fm' => $fm } );
 }
-foreach my $job ( @jobs[&FileSizeOrder(@jobs)] ){
-	my $tmp = $SLURM->run( $job->{'cmd'}, $job->{'fm,'}, $job->{'this_outfile'} );
+
+foreach my $job ( @jobs[ &FileSizeOrder(@jobs) ] ) {
+	print "\$exp = " . root->print_perl_var_def($job) . ";\n";
+	my $tmp = $SLURM->run( $job->{'cmd'}, $job->{'fm'}, $job->{'outfile'} );
 	$submitted++ if ( $tmp == 1 );
 	if ( $submitted >= $max_jobs ) {
 		$submitted -= 50;
-		$SLURM->wait_for_last_finished($job->{'this_outfile'});
+		$SLURM->wait_for_last_finished( $job->{'outfile'} );
 	}
 }
 
@@ -289,14 +295,13 @@ sub byFileSize {
 	-s $b->{'fm'}->{'total'} <=> -s $a->{'fm'}->{'total'};
 }
 
-
 sub FileSizeOrder {
 	my @files = @_;
-	my $i = 0;
-	my $order = { map { $_->{'fm'}->{'total'} => $i ++ }  @files  } ; 
+	my $i     = 0;
+	my $order = { map { $_->{'fm'}->{'total'} => $i++ } @files };
 	my @ret;
 	foreach ( sort byFileSize @files ) {
-		push( @ret, $order->{$_->{'fm'}->{'total'}});
+		push( @ret, $order->{ $_->{'fm'}->{'total'} } );
 	}
 	return @ret;
 }
@@ -307,7 +312,7 @@ sub create_picard_call {
 	my $p      = $outpath;
 	$p ||= "$fm->{'path'}/";
 	my $cmd = "picard";
-	if ( $local) {
+	if ($local) {
 		$cmd = "picard-tools";
 	}
 	my $s =

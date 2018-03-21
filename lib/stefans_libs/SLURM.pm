@@ -410,7 +410,7 @@ sub run_notest {
 	  ;    ## the module load lines should also not make the script run.
 
 	if ( @OK > 0 and !$self->{'debug'} ) {
-		if ( $self->{'local'} ) {
+		if ( $self->{'local'} or $self->{'run_local'}) {
 			## add a local stdout and stderr file like slurm does.
 			system( $self->{'shell'}
 				  . " $fm->{path}/$fm->{'filename_core'}.sh "

@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use stefans_libs::root;
-use Test::More tests => 2;
+use Test::More tests => 9;
 use stefans_libs::flexible_data_structures::data_table;
 
 use FindBin;
@@ -37,7 +37,7 @@ $genome = "$plugin_path/data";
 $bigwigTracks = "$outpath/BigWig.html";
 ok( !-f $bigwigTracks, "outfile does not exists before cmd run" );
 
-@options = ( "A", "NOprojAtall" );
+@options = ( "A", "NOprojAtall" , 'project','dell');
 
 $max_jobs = 40;
 
@@ -81,7 +81,7 @@ $exp = [
 	'#SBATCH -o AbsolutelyEmpty%j.out',
 	'#SBATCH -e AbsolutelyEmpty%j.err',
 	'module load icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 SAMtools/1.3.1 '
-		.'HISAT2/2.0.4 BEDTools/2.25.0 Java/1.8.0_92 picard/2.8.2.1 ucsc-tools/R2016a ',
+		.'HISAT2/2.0.4 BEDTools/2.25.0 ucsc-tools/R2016a ',
 	"hisat2  -x $plugin_path/data --sra-acc $plugin_path/data/AbsolutelyEmpty.sra --threads 10 "
 		."--add-chrname > \$SNIC_TMP/AbsolutelyEmpty_hisat.sam",
 	"samtools view -Sb  \$SNIC_TMP/AbsolutelyEmpty_hisat.sam | samtools sort -@ 9 -o \$SNIC_TMP/AbsolutelyEmpty_hisat.sorted.bam -",
@@ -89,6 +89,8 @@ $exp = [
 	"rm -f \$SNIC_TMP/AbsolutelyEmpty_hisat.sam",
 	'fi',
 	"mv \$SNIC_TMP/AbsolutelyEmpty_hisat.sorted.bam $outpath/AbsolutelyEmpty_hisat.sorted.bam",
+	"module purge",
+	'module load GCC/4.9.3-2.25 OpenMPI/1.10.2 icc/2016.1.150-GCC-4.9.3-2.25 impi/5.1.2.150 BEDTools/2.25.0 Java/1.8.0_72 picard/2.8.2 ucsc-tools/R2016a ',
 	"bedtools genomecov -bg -split -ibam $outpath/AbsolutelyEmpty_hisat.sorted.bam -g $plugin_path/data/AbsolutelyEmpty.chrlength |"
   		." sort -k1,1 -k2,2n > $outpath/AbsolutelyEmpty_hisat.bedGraph",
   	"polish_bed_like_files.pl -bed_file $outpath/AbsolutelyEmpty_hisat.bedGraph",
