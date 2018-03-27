@@ -104,6 +104,7 @@ sub copy {
 
 sub write {
 	my ( $self, $glob ) = @_;
+	@{$self->{'data'}}[2] ||= '+';
 	if ( defined $glob ) {
 		print $glob join( "\n", @{ $self->{'data'} } ) . "\n";
 	}
