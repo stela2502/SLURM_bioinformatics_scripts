@@ -115,13 +115,32 @@ sub filter_file {
 	my ( $self, $function, $fname ) = @_;
 	my $file = $self->open_file($fname);
 	my ($line);
-	while (1) {
-		$line = $self->read_file_line($file);
-		last unless ($line);
-		$line = $self->fastq_line( $line, 0 );
-		next unless ($line);
-		&{$function}( $self, $line );
+	if ( $self->{'debug'} ) {
+		my $i = 0;
+	  FILTER:
+		while (1) {
+			$line = $self->read_file_line($file);
+			last unless ($line);
+			$line = $self->fastq_line( $line, 0 );
+			next unless ($line);
+			&{$function}( $self, $line );
+			if ( $i++ == 1000 ) {
+				warn
+"FastqFile is in debug mode - filter stopped after 1000 reads\n";
+				last FILTER;
+			}
+		}
 	}
+	else {
+		while (1) {
+			$line = $self->read_file_line($file);
+			last unless ($line);
+			$line = $self->fastq_line( $line, 0 );
+			next unless ($line);
+			&{$function}( $self, $line );
+		}
+	}
+
 	close($file);
 	return $self;
 }
@@ -164,15 +183,36 @@ sub filter_multiple_files {
 	my ( $self, $function, @files ) = @_;
 	my @objects = map { $self->open_file($_) } @files;
 	my (@lines);
-	while (1) {
-		@lines = map { $self->read_file_line($_) } @objects;
-		last unless ( $lines[0] );
-		for ( my $i = 0 ; $i < @lines ; $i++ ) {
-			$lines[$i] = $self->fastq_line( $lines[$i], $i );
+	if ( $self->{'debug'} ) {
+		my $i = 0;
+	  FILTER:
+		while (1) {
+			@lines = map { $self->read_file_line($_) } @objects;
+			last unless ( $lines[0] );
+			for ( my $i = 0 ; $i < @lines ; $i++ ) {
+				$lines[$i] = $self->fastq_line( $lines[$i], $i );
+			}
+			next unless ( $lines[0] );
+			&{$function}( $self, @lines );
+			if ( $i++ == 1000 ) {
+				warn
+"FastqFile is in debug mode - filter stopped after 1000 reads\n";
+				last FILTER;
+			}
 		}
-		next unless ( $lines[0] );
-		&{$function}( $self, @lines );
 	}
+	else {
+		while (1) {
+			@lines = map { $self->read_file_line($_) } @objects;
+			last unless ( $lines[0] );
+			for ( my $i = 0 ; $i < @lines ; $i++ ) {
+				$lines[$i] = $self->fastq_line( $lines[$i], $i );
+			}
+			next unless ( $lines[0] );
+			&{$function}( $self, @lines );
+		}
+	}
+
 	map { close($_) } @objects;
 	return $self;
 }

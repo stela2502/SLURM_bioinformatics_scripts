@@ -96,16 +96,15 @@ is_deeply( [split("\n",$value)], $exp, "the script file is as expected" );
 ## OK now test the local run:
 $SLURM->{'run_local'} = 1; ## I do not want to test the SLURM environment here ;-)
 $SLURM->{'debug'} = 0;
-$SLURM-> run( "df -h > $outpath/df_output.txt", "$outpath/run_df" );
+$value = $SLURM-> run( "df -h > $outpath/df_output.txt", "$outpath/run_df" );
 
 ok ( -f "$outpath/run_df.sh" , "script created" );
 ok ( -f "$outpath/df_output.txt" , "output created" );
 
-opendir( DIR, $outpath ) or die $!;
-my @slurm_outfiles = map { $_ =~ s/local\.\d+\./local.17111./; $_ }  grep { /run_df.*[eo][ru][rt]/ } readdir( DIR );
-closedir( DIR );
+my @slurm_outfiles = $SLURM->get_files_from_path($outpath, 'run_df.local\\d.[oe]*');
 
-is_deeply ( \@slurm_outfiles, ['run_df.local.17111.out', 'run_df.local.17111.err'], "No SLURM output created - as wanted" );
+
+is_deeply ( \@slurm_outfiles, ["$outpath/run_df.local$value.err", "$outpath/run_df.local$value.out"], "No SLURM output created - as wanted" );
 
 
 #print "\$exp = ".root->print_perl_var_def($value ).";\n";

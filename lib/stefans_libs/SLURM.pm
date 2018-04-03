@@ -64,7 +64,7 @@ sub new {
 	$clean = 0 unless ( defined $clean );
 
 	my $self = {
-		'run_local'     => 0,
+		'local'     => 0,
 		'shell'         => 'bash',
 		'SLURM_modules' => [],
 		'sub_SLURMS'    => [],
@@ -86,7 +86,7 @@ sub new {
 
 	$self->options($options);
 
-	$self->{'max_jobs'} ||= 40;
+	$self->{'max_jobs'} ||= 80;
 
 	open( IN, "whoami |" ) or die $!;
 	my @IN = <IN>;
@@ -375,11 +375,11 @@ sub get_files_from_path {
 	my @dat = grep { !/^\./ } readdir(DIR);
 	closedir(DIR);
 
-	#print "I get files from path '$path'\n";
+	#print "I get files from path '$path'\n". join("\n", @dat[0..2],'.','.', $dat[$#dat])."\n";
 	my @ret;
 	foreach my $select (@matches) {
 
-		#print "I select all files matching '$select'\n"
+		#print "I select all files matching '$select'\n";
 		# . join( "\n", @dat ) . "\n";
 		push(@ret, grep { /$select/ } @dat);
 
@@ -414,9 +414,9 @@ sub run_notest {
 			## add a local stdout and stderr file like slurm does.
 			system( $self->{'shell'}
 				  . " $fm->{path}/$fm->{'filename_core'}.sh "
-				  . "2> $fm->{path}/$fm->{'filename_core'}.stderr "
-				  . " > $fm->{path}/$fm->{'filename_core'}.stdout " );
-			return 1;
+				  . "2> $fm->{path}/$fm->{'filename_core'}.local$$.err "
+				  . " > $fm->{path}/$fm->{'filename_core'}.local$$.out " );
+			return $$;
 		}
 		else {    ## use slurm pipeline
 
