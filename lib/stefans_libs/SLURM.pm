@@ -75,7 +75,7 @@ sub new {
 				),
 				'required' => [ 'n', 'N', 't' ],
 				'optional' =>
-				  [ 'A', 'p', 'mail-user', 'mail-type', 'mem-per-cpu', 'w' ],
+				  [ 'A', 'p', 'mail-user', 'mail-type', 'mem-per-cpu', 'w', 'begin' ],
 			}
 		),
 	};
