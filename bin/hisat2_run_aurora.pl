@@ -48,6 +48,8 @@
                       every first file == read 1 every second == read2
 
        -dropDuplicates :use picard to drop duplicates
+       
+       -justMapping  :Just map and sort the bam files; not create bigwig files
 
        -bigwigTracks :the bigwig tracks file you can upload to the USCS genome browser
 
