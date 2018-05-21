@@ -209,7 +209,7 @@ my ( @cmd, @big_wig_urls, $tmp, $this_outfile );
 my $SLURM = stefans_libs::SLURM->new( $options, 0 );
 $SLURM->{'debug'} = 1 if ($debug);
 $SLURM->{'local'} = 1 if ($local);
-
+$SLURM->{'max_jobs'} = $max_jobs;
 my $BAM = stefans_libs::scripts::BAM->new($options);
 $BAM->{'p'} = $options->{'n'};
 
