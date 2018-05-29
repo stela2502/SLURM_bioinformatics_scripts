@@ -288,6 +288,11 @@ sub load_R_x11 {
 	return $cmd;
 }
 
+sub restore_SLURM_state{
+	my ( $self, $module ) = @_;
+	return "module purge\$module restore $module\n";
+}
+
 sub load_SLURM_modules {
 	my ( $self, @modules ) = @_;
 	return '' if ( $self->{'local'} );

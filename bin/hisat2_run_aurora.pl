@@ -222,10 +222,12 @@ $fm = root->filemap( $files[0] );
 
 unless ($local) {
 	$SLURM->{'SLURM_modules'} = [
-		'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
-		'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'SAMtools/1.3.1',
-		'HISAT2/2.0.4',
-		'BEDTools/2.25.0', 'Java/1.8.0_72', 'ucsc-tools/R2016a',
+	'icc/2017.1.132-GCC-6.3.0-2.27', 'impi/2017.1.132','SAMtools/1.4.1', 'HISAT2/2.1.0',
+'BEDTools/2.26.0','Java/1.8.0_92' 
+		#'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
+		#'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'SAMtools/1.3.1',
+		#'HISAT2/2.0.4',
+		#'BEDTools/2.25.0', 'Java/1.8.0_72', 'ucsc-tools/R2016a',
 
 		#	stefans_libs::scripts::BAM->SLURUM_load(),
 	];

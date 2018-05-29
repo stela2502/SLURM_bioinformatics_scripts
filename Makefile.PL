@@ -13,14 +13,14 @@ my $VERSION = 0.6;
 #all_from 'lib/SLURM_bioinformatic_scripts.pm';
 #author 'Stefan Lang <Stefan.Lang@med.lu.se>';
 
-my @files = ( map {"bin/$_" } grep !/^\./,  grep '*.pl', readdir(DIR) );
+my @files = ( grep !/^\./,  grep /.*\\.pl$/, readdir(DIR) );
 #print  join("\n", @files )."\n";
 
 
 WriteMakefile(
         NAME         => "SLURM_bioinformatic_scripts",
         VERSION_FROM => "lib/SLURM_bioinformatic_scripts.pm",
-        EXE_FILES    => [ map {"bin/$_" } grep !/^\./,  grep /.*\.pl$/, readdir(DIR), 'iCLIP/map_motive_back_to_peak.pl'  ],
+        EXE_FILES    => [ map {"bin/$_" } @files, 'iCLIP/map_motive_back_to_peak.pl'  ],
         PREREQ_PM    => {
                 'Stefans_Libs_Essentials'               => 0,
 		'File::Copy' => 0, 
