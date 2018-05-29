@@ -4,7 +4,6 @@
 
 use ExtUtils::MakeMaker;
 
-opendir( DIR, "bin/" ) or die "I could not open the bin folder\n$!\n";
 
 
 my $VERSION = 0.6;
@@ -12,9 +11,11 @@ my $VERSION = 0.6;
 #name  'SLURM_bioinformatic_scripts';
 #all_from 'lib/SLURM_bioinformatic_scripts.pm';
 #author 'Stefan Lang <Stefan.Lang@med.lu.se>';
+opendir( DIR, "bin/" ) or die "I could not open the bin folder\n$!\n";
+my @files = (  grep /\.pl$/, readdir(DIR) );
+closedir(DIR);
 
-my @files = ( grep !/^\./,  grep /.*\\.pl$/, readdir(DIR) );
-#print  join("\n", @files )."\n";
+#print  "These are the sripts I want to install: ". join("\n", @files )."\n";
 
 
 WriteMakefile(
@@ -29,5 +30,4 @@ WriteMakefile(
           }
 
 );
-closedir(DIR);
 

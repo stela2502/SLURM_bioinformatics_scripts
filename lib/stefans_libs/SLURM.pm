@@ -246,8 +246,8 @@ sub script {
 	}
 	$ret .= join( "\n",
 		"#SBATCH -J $name",
-		"#SBATCH -o $name" . "%j.out",
-		"#SBATCH -e $name" . "%j.err" );
+		"#SBATCH -o $name" . ".%j.out",
+		"#SBATCH -e $name" . ".%j.err" );
 	if ( @{ $self->{'SLURM_modules'} } ) {
 		$ret .= "\n" . $self->load_SLURM_modules();
 	}

@@ -220,6 +220,8 @@ foreach (qw(n N t mem)) {
 
 $fm = root->filemap( $files[0] );
 
+$SLURM->{'purge'} = 1;
+
 unless ($local) {
 	$SLURM->{'SLURM_modules'} = [
 	'icc/2017.1.132-GCC-6.3.0-2.27', 'impi/2017.1.132','SAMtools/1.4.1', 'HISAT2/2.1.0',
