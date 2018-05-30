@@ -290,7 +290,7 @@ sub load_R_x11 {
 
 sub restore_SLURM_state{
 	my ( $self, $module ) = @_;
-	return "module purge\$module restore $module\n";
+	return "module purge\nmodule restore $module\n";
 }
 
 sub load_SLURM_modules {
