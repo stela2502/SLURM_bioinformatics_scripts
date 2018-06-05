@@ -50,6 +50,7 @@
        -dropDuplicates :use picard to drop duplicates
        
        -justMapping  :Just map and sort the bam files; not create bigwig files
+       -noSort       :more restrictive than justMapping as the bams are not even sorted
 
        -bigwigTracks :the bigwig tracks file you can upload to the USCS genome browser
 
@@ -89,7 +90,7 @@ my (
 	$local,        $options,  @options,  $dropDuplicates,
 	$genome,       $coverage, $paired,   $fast_tmp,
 	$bigwigTracks, $sra,      $outpath,  $max_jobs,
-	$justMapping,  $mapper_options,
+	$justMapping,  $mapper_options,      $noSort,
 );
 
 Getopt::Long::GetOptions(
@@ -107,6 +108,7 @@ Getopt::Long::GetOptions(
 	"-fast_tmp=s"       => \$fast_tmp,
 	"-justMapping"      => \$justMapping,
 	"-local"            => \$local,
+	"-noSort" => \$noSort,
 
 	"-help"  => \$help,
 	"-debug" => \$debug
@@ -130,6 +132,7 @@ unless ( -f $coverage ) {
 unless ( defined $bigwigTracks ) {
 	$error .= "the cmd line switch -bigwigTracks is undefined!\n";
 }
+
 unless ( defined $mapper_options ) {
 	$mapper_options = '';
 }
@@ -190,8 +193,10 @@ $task_description .= " -max_jobs $max_jobs";
 $task_description .= " -mapper_options '$mapper_options'"
   if ( $mapper_options =~ m/\w/ );
 $task_description .= " -fast_tmp '$fast_tmp'" if ( $fast_tmp =~ m/\w/ );
-$task_description .= " -debug"                if ($debug);
 $task_description .= " -justMapping"          if ($justMapping);
+$task_description .= " -noSort"               if ($noSort);
+
+$task_description .= " -debug"                if ($debug);
 
 ## Do whatever you want!
 my $fm = root->filemap($bigwigTracks);
@@ -249,26 +254,53 @@ unless ($local) {
 @files = map { $_ =~ s/^\.\///; $_ } @files;
 my $submitted = 0;
 my @jobs;
-
+my @tmp;
+my $preprocessed_outfile_to_infile = "";
 ## create the jobs to sort them by file size later on ;-)
 
 while ( scalar(@files) ) {
 	my $fm = root->filemap( $files[0] )
 	  ;    ## the files will be depleted by the create_call function!
-	my @cmd;
-	$cmd[0] = &chk_cmd( &create_call() );
-	$cmd[0] .=
-	  &chk_cmd( $BAM->convert_sam_2_sorted_bam( $this_outfile, $mainOutpath ) );
-	$cmd[1] .= &chk_cmd( create_picard_call($this_outfile) )
-	  if ($dropDuplicates);
+	my (@cmd, @ofiles);
+	
+	($cmd[0], $this_outfile ) = &create_call(); ## this is a temporary step
+	
+	if ( $noSort ){
+		@tmp = $BAM->convert_sam_2_bam( $this_outfile );
+		$tmp[0] = $cmd[0].$tmp[0];
+		$cmd[0] = &chk_cmd( @tmp );
+	}else {
+		@tmp = $BAM->convert_sam_2_sorted_bam($this_outfile );
+		$tmp[0] = $cmd[0].$tmp[0];
+		$cmd[0] = &chk_cmd( @tmp );
+	}
+	push ( @ofiles, "$this_outfile" );
+		
+	if ($dropDuplicates){
+		$cmd[1] .= &chk_cmd( create_picard_call($this_outfile) );
+		push ( @ofiles, "$this_outfile" );
+	}
+	
+	if (!( $justMapping or $noSort ) ){ ## run this
 	$cmd[1] .=
 	  &chk_cmd(
-		$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) )
-	  unless ($justMapping);
-
+		$BAM->convert_sorted_bam_2_bedGraph( $this_outfile, $coverage ) );
 	$cmd[1] .=
-	  &chk_cmd( $BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) )
-	  unless ($justMapping);
+	  &chk_cmd( $BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) );
+	  push ( @ofiles, "$this_outfile" );
+	}
+	my @tmp = map {  &chk_cmd_no_cp( $BAM->recover_files( $mainOutpath, $_ ), $_ ) } @ofiles;
+	my $null_all = 1;
+	foreach ( @tmp ) {
+		unless( $_ =~m/^#/ ) { $null_all= 0 }
+	}
+	map { $cmd[1] .= $_ } @tmp;
+	if ( $null_all ) {
+		## nothing has to be run - all outfiles are present!
+		$cmd[0] = join( "\n", map { if ( $_ =~m/^#/) { $_} else { "#$_"} } split("\n", $cmd[0] ) );
+		
+		$cmd[1] = join( "\n", map { if ( $_ =~m/^#/) { $_} else { "#$_"} } split("\n", $cmd[1] ) );
+	}
 
 	push( @jobs, { 'outfile' => "$this_outfile", 'cmd' => [@cmd], 'fm' => $fm } );
 }
@@ -315,20 +347,20 @@ sub FileSizeOrder {
 sub create_picard_call {
 	my ($file) = @_;
 	my $fm     = root->filemap($file);
-	my $p      = $outpath;
-	$p ||= "$fm->{'path'}/";
+	
+	#warn "the \$preprocessed_outfile_to_infile would be this: '$preprocessed_outfile_to_infile'\n";
 	my $cmd = "picard";
 	if ($local) {
 		$cmd = "picard-tools";
-	}
+	}	
 	my $s =
 	    "$cmd MarkDuplicates INPUT="
 	  . $fm->{'total'}
 	  . " OUTPUT="
-	  . "$p$fm->{'filename_core'}_picard_deduplicated.bam"
+	  . "$fm->{'path'}/$fm->{'filename_core'}_picard_deduplicated.bam"
 	  . " REMOVE_DUPLICATES=TRUE M="
-	  . "$p$fm->{'filename_core'}_picard_metrix.txt";
-	return $s, "$p$fm->{'filename_core'}_picard_deduplicated.bam";
+	  . "$fm->{'path'}/$fm->{'filename_core'}_picard_metrix.txt";
+	return $s, "$fm->{'path'}/$fm->{'filename_core'}_picard_deduplicated.bam";
 }
 
 sub create_call {
@@ -344,8 +376,9 @@ sub create_call {
 	unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
 	my $s =
 "hisat2 $mapper_options -x $genome -U $fm->{'total'} --threads $options->{proc} --add-chrname > $fast_tmp/$fm->{'filename_core'}_hisat.sam\n";
-	return $s, "$fast_tmp/$fm->{'filename_core'}_hisat.sam",
-	  "$p/$fm->{'filename_core'}_hisat.sorted.bam";
+	## here I need to know what we finally what to get
+	
+	return $s, "$fast_tmp/$fm->{'filename_core'}_hisat.sam", "$p/$fm->{'filename_core'}_hisat.sorted.bam", "$p/$fm->{'filename_core'}_hisat.bam"  ;
 }
 
 sub create_sra_call {
@@ -359,8 +392,7 @@ sub create_sra_call {
 	unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
 	my $s =
 "hisat2 $mapper_options -x $genome --sra-acc $fm->{'total'} --threads $options->{proc} --add-chrname > $fast_tmp/$fm->{'filename_core'}_hisat.sam\n";
-	return $s, "$fast_tmp/$fm->{'filename_core'}_hisat.sam",
-	  "$p/$fm->{'filename_core'}_hisat.sorted.bam";
+	return $s, "$fast_tmp/$fm->{'filename_core'}_hisat.sam" ,"$p/$fm->{'filename_core'}_hisat.sorted.bam", "$p/$fm->{'filename_core'}_hisat.bam" ;
 }
 
 sub create_paired_call {
@@ -386,7 +418,58 @@ sub create_paired_call {
 sub chk_cmd {
 	my ( $cmd, @ofiles ) = @_;
 	$this_outfile = $ofiles[0];
-	return join( "\n",
-		map { $SLURM->check_4_outfile( $_, @ofiles ) } split( /\n/, $cmd ) )
+	$preprocessed_outfile_to_infile = undef;
+	my @return = map { $SLURM->check_4_outfile( $_,@ofiles, &final_outfile($mainOutpath, @ofiles) ) } split( /\n/, $cmd ) ;
+	my $regen = 0;
+	map { if ( $_ =~ m/^#/ ){ $regen = 1 } } @return;
+	if ( $regen and ref($preprocessed_outfile_to_infile) eq "HASH" ) {
+		push ( @return, keys %$preprocessed_outfile_to_infile );
+	}
+	return join( "\n", @return )
 	  . "\n";
+}
+
+sub chk_cmd_no_cp {
+	my ( $cmd, @ofiles ) = @_;
+	$this_outfile = $ofiles[0];
+	$preprocessed_outfile_to_infile = undef;
+	my @return = map { $SLURM->check_4_outfile( $_,@ofiles, &final_outfile($mainOutpath, @ofiles) ) } split( /\n/, $cmd ) ;
+	return join( "\n", @return )
+	  . "\n";
+}
+
+
+sub final_outfile {
+	my ( $final_path, @files) = @_;
+
+	my @ret;
+	foreach my $fm (  @files ) {
+		$fm = &fm_check($fm);
+		my $f  = $fm->{'path'} . "/" . $fm->{'filename'};
+		my $final = $final_path."/".$fm->{'filename'};
+		unless ( $final eq $f ){
+			push ( @ret, $final);
+			if ( -f $final ){
+				$preprocessed_outfile_to_infile ->{"cp $final $f\n" } ++;
+			}
+		}else {
+			push ( @ret, $f );
+		}
+	}
+	return @ret;
+}
+
+sub fm_check {
+	my ( $fm ) = @_;
+	unless ( ref($fm) eq "HASH") {
+ 		if ( $fm =~m/^(\$\w*)\/(.*)$/ ) {
+ 			## oops the tmp file variable!
+ 			my $tmp = $1;
+ 			$fm = root->filemap( $2 );
+ 			$fm->{'path'} = $tmp;
+ 		}else {
+ 			$fm = root->filemap( $fm );
+ 		}
+ 	}
+ 	return $fm;
 }

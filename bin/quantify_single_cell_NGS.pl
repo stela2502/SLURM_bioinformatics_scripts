@@ -44,7 +44,7 @@
        
        ## options for the slurm batch process
        
-       -slurm A lu2016-2-7 N 1 t 02:00:00
+       -slurm A lsens2017-3-2 p dell N 1 t 02:00:00
    
 =head1 DESCRIPTION
 
@@ -67,9 +67,12 @@ my $plugin_path = "$FindBin::Bin";
 
 my $VERSION = 'v1.0';
 
-my ( $help, $debug, $database, @bams, $gtf, $tmp_path, $amount,
-	$gtf_feature_type, $stranded,
-	$gtf_attr_type, $paired, $n, @slurm, $IDXstats, $outfile, $ls_input );
+my (
+	$help,     $debug,         $database, @bams,
+	$gtf,      $tmp_path,      $amount,   $gtf_feature_type,
+	$stranded, $gtf_attr_type, $paired,   $n,
+	@slurm,    $IDXstats,      $outfile,  $ls_input
+);
 
 Getopt::Long::GetOptions(
 	"-bams=s{,}"          => \@bams,
@@ -77,7 +80,7 @@ Getopt::Long::GetOptions(
 	"-gtf_feature_type=s" => \$gtf_feature_type,
 	"-gtf_attr_type=s"    => \$gtf_attr_type,
 	"-paired"             => \$paired,
-	"-stranded=s"           => \$stranded,
+	"-stranded=s"         => \$stranded,
 	"-amount=s"           => \$amount,
 	"-n=s"                => \$n,
 	"-outfile=s"          => \$outfile,
@@ -93,7 +96,12 @@ my $warn  = '';
 my $error = '';
 
 unless ( -f $bams[0] ) {
-	eval { open ( IN, "ls $bams[0] |"); $ls_input = $bams[0]; @bams = map{chomp;$_} <IN>; close ( IN ); };
+	eval {
+		open( IN, "ls $bams[0] |" );
+		$ls_input = $bams[0];
+		@bams = map { chomp; $_ } <IN>;
+		close(IN);
+	};
 }
 unless ( -f $bams[0] ) {
 	$error .= "the cmd line switch -bams is undefined!\n";
@@ -121,10 +129,12 @@ unless ( defined $tmp_path ) {
 unless ( defined $outfile ) {
 	$error .= "the cmd line switch -outfile is undefined!\n";
 }
-unless ( $stranded ) {
+unless ($stranded) {
 	$stranded = 0;
-}elsif ( ! ( $stranded == 1 or $stranded == 2 ) ) {
-	$error .= "-stranded may only have the values 0, 1 or 2 - not '$stranded'\n";
+}
+elsif ( !( $stranded == 1 or $stranded == 2 ) ) {
+	$error .=
+	  "-stranded may only have the values 0, 1 or 2 - not '$stranded'\n";
 }
 
 map {
@@ -159,9 +169,9 @@ $task_description .= " -gtf_feature_type '$gtf_feature_type'"
   if ( defined $gtf_feature_type );
 $task_description .= " -gtf_attr_type '$gtf_attr_type'"
   if ( defined $gtf_attr_type );
-$task_description .= " -paired " if ($paired);
+$task_description .= " -paired "   if ($paired);
 $task_description .= " -stranded " if ($stranded);
-$task_description .= " -n '$n'"  if ( defined $n );
+$task_description .= " -n '$n'"    if ( defined $n );
 $task_description .= " -tmp_path '$tmp_path'" unless ( $tmp_path eq "tmp" );
 $task_description .= " -outfile '$outfile'" if ( defined $outfile );
 $task_description .= " -amount $amount";
@@ -183,7 +193,6 @@ open( LOG, ">$outfile.log" ) or die $!;
 print LOG $task_description . "\n";
 close(LOG);
 
-
 ## Do whatever you want!
 my ($max);
 my $a = 1;
@@ -193,19 +202,29 @@ if ($paired) {
 else {
 	$paired = "F";
 }
-
+use stefans_libs::SLURM;
 my $slurm;
 if (@slurm) {
-	use stefans_libs::SLURM;
 	for ( my $i = 0 ; $i < @slurm ; $i += 2 ) {
 		$slurm->{ $slurm[$i] } = $slurm[ $i + 1 ];
 	}
-	$slurm->{'n'}     = $n;
-	$slurm->{'N'}     = 1 unless ( $slurm->{'N'} );
-	$slurm->{'debug'} = $debug;
-	$slurm->{'A'} ||= 'lu2016-2-7';
-	$slurm->{'SLURM_modules'} = ['ifort/2016.1.150-GCC-4.9.3-2.25',  'impi/5.1.2.150', 'R/3.2.3-libX11-1.6.3'];
-	$slurm            = stefans_libs::SLURM->new($slurm);
+}
+$slurm->{'n'}     = $n;
+$slurm->{'N'}     = 1 unless ( $slurm->{'N'} );
+$slurm->{'debug'} = $debug;
+$slurm->{'A'} ||= 'lsens2017-3-2';
+$slurm->{'p'}             = 'dell';
+
+$slurm = stefans_libs::SLURM->new($slurm);
+$slurm->{'debug'} = $debug;
+
+$slurm->{'SLURM_modules'} = [
+	'ifort/2017.4.196-GCC-6.4.0-2.28', 'impi/2017.3.196',
+	'R/3.4.3-X11-20171023'
+];
+$slurm->{'purge'} = 1;
+unless( @slurm ) {
+	$slurm->{'local'} = 1;
 }
 
 for ( my $i = 0 ; $i < @bams ; $i += $amount ) {
@@ -213,12 +232,9 @@ for ( my $i = 0 ; $i < @bams ; $i += $amount ) {
 	  or die "I could not create the bam file '$tmp_path/bams.$a.txt'\n$!\n";
 	$max = $i + $amount - 1;
 	$max = $#bams if ( $max > $#bams );
-	print OUT join(
-		"\n",
-		map {
-			root->filemap($_)->{'total'};
-		} @bams[ $i .. $max ]
-	)."\n";
+	print OUT
+	  join( "\n", map { root->filemap($_)->{'total'}; } @bams[ $i .. $max ] )
+	  . "\n";
 	close(OUT);
 	open( SCR, ">$tmp_path/quantify.$a.R" )
 	  or die "I could not create the script file '$tmp_path/script.$a.R'\n$!\n";
@@ -233,16 +249,12 @@ for ( my $i = 0 ; $i < @bams ; $i += $amount ) {
 	);
 	close(SCR);
 	if ( !-f "$tmp_path/Robject$a.RData" ) {
-		if (@slurm) {
-			$slurm->run(
-				"R CMD BATCH $tmp_path/quantify.$a.R",
-				root->filemap("$tmp_path/Robject$a.RData")
-			);
-		}
-		else {
-			print "creating Robject$a.RData\n";
-			system("R CMD BATCH $tmp_path/quantify.$a.R") unless ($debug);
-		}
+		
+		$slurm->run(
+			"R CMD BATCH $tmp_path/quantify.$a.R",
+			root->filemap("$tmp_path/Robject$a.RData")
+		);
+		
 	}
 	else {
 		print "outfile $tmp_path/Robject$a.RData does exist\n";
@@ -272,9 +284,8 @@ print SCR join(
 				"dat\$stat <- cbind(dat\$stat, dat$id\$stat[,-1] )",
 				"# the stat colnames get lost if dat$id\$stat[,-1] is a vector",
 				"if ( class(dat$id\$stat[,-1]) == 'integer' ){",
-				"  colnames(dat\$stat)[ncol(dat\$stat)] = colnames(dat$id\$stat)[2]",
-				"}"
-				)
+"  colnames(dat\$stat)[ncol(dat\$stat)] = colnames(dat$id\$stat)[2]",
+				"}" )
 		} 2 .. $a
 	),
 	"save(dat, file='$outfile')",
@@ -283,11 +294,13 @@ close(SCR);
 
 ## while all other things are processed lets work on the IDXstats....
 
+if ( $bams[0] =~ m/sorted/ ) {
+
 unless ( -f $IDXstats ) {
 	$IDXstats = "$fm->{'path'}/$fm->{'filename_base'}_IDXstats.xls";
 	$IDXstats =~ s!//!/!g;
-	if ( defined $ls_input ){
-		@bams= ($ls_input);
+	if ( defined $ls_input ) {
+		@bams = ($ls_input);
 	}
 	my $cmd =
 	    "IDXstats_4_bams.pl -bams '"
@@ -325,8 +338,16 @@ save(FailedSamples,file='$failedCellsRobj' )
 
 ## now we can think about summing up the results / hopefully most quantifications have been finished up to now ;-)
 
-system("R CMD BATCH $tmp_path/sumup.R &") unless ($debug);
+}else {
+	warn "The idxstats could not be created as the bam files were not sorted.\n";
+}
+$slurm->{'local'} = 1; ## that can be done on the frontend - really!
 
+$slurm->run(
+			"R CMD BATCH $tmp_path/sumup.R",
+			root->filemap("$tmp_path/Robject$a.RData")
+		);
+		
 print
 "Please wait for the sumuo.R process to finish\nThe file '$outfile' will then contain the R counts object that can be further processed in any R script\n";
 
@@ -336,9 +357,6 @@ sub read_bams_R {
 		GTF.attrType = 'gene_id', isPairedEnd = FALSE, nthreads = 2, as.obj=F, strandSpecific = 0 ) {
 	if (file.exists(bamFiles)){
 		bamFiles <- readLines(bamFiles)
-	}
-	if (file.exists('$failedCellsRobj') ){ # not necessary?
-		#load('$failedCellsRobj') 
 	}
 
 	counts <- featureCounts(files =bamFiles,annot.ext = annotation ,isGTFAnnotationFile = TRUE,GTF.featureType = GTF.featureType,

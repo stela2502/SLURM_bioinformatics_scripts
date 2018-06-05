@@ -93,7 +93,35 @@ Returns the script + the final outfile.
 
 sub convert_sam_2_sorted_bam {
 	my ($self, $fm, $final_path) = @_;
- 	unless ( ref($fm) eq "HASH") {
+
+	$fm = $self->fm_check($fm);
+	
+	if ( defined $final_path ){
+		Carp::confess ( "Lib change - instead of copying the file to the final path here call ".ref($self)."->recover_files($final_path, (<files you want to get>))");
+	}
+
+ 	my $ret_file;
+	my $f  = $fm->{'path'} . "/" . $fm->{'filename_core'};
+	$ret_file = "$f.sorted.bam";
+
+	return join("\n",
+		 "samtools view -Sb  $f.sam | samtools sort -\@ "
+		  . ( $self->{p} )
+		  . " -o $f.sorted.bam -",
+		"if  [ -f $f.sorted.bam ]&&[ -s $f.sorted.bam ]; then", "rm -f $f.sam",
+		"fi",""
+	), $ret_file;
+}
+
+=head3 fm_check ($fm )
+
+This function checks if the file is a root->filemap() result and converts it into one if not.
+
+=cut
+
+sub fm_check {
+	my ( $self, $fm ) = @_;
+	unless ( ref($fm) eq "HASH") {
  		if ( $fm =~m/^(\$\w*)\/(.*)$/ ) {
  			## oops the tmp file variable!
  			my $tmp = $1;
@@ -103,23 +131,46 @@ sub convert_sam_2_sorted_bam {
  			$fm = root->filemap( $fm );
  		}
  	}
- 	my $ret_file;
- 	$final_path ||=$fm->{'path'};
-	my $f  = $fm->{'path'} . "/" . $fm->{'filename_core'};
-	my $final = $final_path."/".$fm->{'filename_core'};
-	unless ( $final eq  $f ){
-		$ret_file = "$final.sorted.bam";
-		$final = "mv $f.sorted.bam $final.sorted.bam";
-	}else {
-		$final = "";
-		$ret_file = "$f.sorted.bam";
+ 	return $fm;
+}
+=head3 recover_files( $final_path, @files )
+
+This function checks whether the files are already in the final path. If they are not the files get moved there.
+
+=cut
+
+sub recover_files {
+	my ( $self, $final_path, @files) = @_;
+	my $cmd = "";
+	foreach my $fm ( @files ) {
+		$fm = $self->fm_check($fm);
+		my $f  = $fm->{'path'} . "/" . $fm->{'filename'};
+		my $final = $final_path."/".$fm->{'filename'};
+		unless ( $final eq $f ){
+			$cmd .= "mv $f $final\n";
+		}
 	}
+	return $cmd
+}
+
+sub convert_sam_2_bam {
+	my ($self, $fm, $final_path) = @_;
+	
+	$fm = $self->fm_check($fm);
+ 	
+ 	if ( defined $final_path ){
+		Carp::confess ( "Lib change - instead of copying the file to the final path here call ".ref($self)."->recover_files($final_path, (<files you want to get>))");
+	}
+	
+ 	my $ret_file;
+	my $f  = $fm->{'path'} . "/" . $fm->{'filename_core'};
+	
+	$ret_file = "$f.bam";
+	
 	return join("\n",
-		 "samtools view -Sb  $f.sam | samtools sort -\@ "
-		  . ( $self->{p} - 1 )
-		  . " -o $f.sorted.bam -",
-		"if  [ -f $f.sorted.bam ]&&[ -s $f.sorted.bam ]; then", "rm -f $f.sam",
-		"fi",$final
+		 "samtools view -Sb  $f.sam > $f.bam ",
+		"if  [ -f $f.bam ]&&[ -s $f.bam ]; then", "rm -f $f.sam",
+		"fi",""
 	), $ret_file;
 }
 

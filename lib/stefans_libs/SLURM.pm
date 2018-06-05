@@ -295,7 +295,7 @@ sub restore_SLURM_state{
 
 sub load_SLURM_modules {
 	my ( $self, @modules ) = @_;
-	return '' if ( $self->{'local'} );
+	#return '' if ( $self->{'local'} );
 	my $loaded;
 	if ( !$self->{'purge'} ) {
 		system("bash -c 'module list 2> /tmp/modulelist.tmp'");
@@ -472,7 +472,7 @@ Adds a '#' before the command if any outfile exists.
 
 sub check_4_outfile {
 	my ( $self, $cmd, @outfiles ) = @_;
-	Carp::confess("I can not check the outfile for '$cmd' - udefined!\n")
+	Carp::confess("I can not check the outfile for '$cmd' - undefined files array!\n")
 	  unless ( defined $outfiles[0] );
 	foreach my $outfile (@outfiles) {
 		if ( -f $outfile ) {
