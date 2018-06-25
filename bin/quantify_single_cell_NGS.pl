@@ -291,6 +291,13 @@ print SCR join(
 	"save(dat, file='$outfile')",
 );
 close(SCR);
+my $tmp = $slurm->{'local'};
+$slurm->{'local'} = 1;
+$slurm->run(
+	"R CMD BATCH $tmp_path/sumum.R",
+	root->filemap("$tmp_path/sumup.RData")
+);
+$slurm->{'local'} = $tmp;
 
 ## while all other things are processed lets work on the IDXstats....
 
@@ -341,12 +348,6 @@ save(FailedSamples,file='$failedCellsRobj' )
 }else {
 	warn "The idxstats could not be created as the bam files were not sorted.\n";
 }
-$slurm->{'local'} = 1; ## that can be done on the frontend - really!
-
-$slurm->run(
-			"R CMD BATCH $tmp_path/sumup.R",
-			root->filemap("$tmp_path/Robject$a.RData")
-		);
 		
 print
 "Please wait for the sumuo.R process to finish\nThe file '$outfile' will then contain the R counts object that can be further processed in any R script\n";

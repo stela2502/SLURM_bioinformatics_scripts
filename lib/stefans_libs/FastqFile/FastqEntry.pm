@@ -104,7 +104,7 @@ sub copy {
 
 sub write {
 	my ( $self, $glob ) = @_;
-	@{$self->{'data'}}[2] ||= '+';
+	@{ $self->{'data'} }[2] = '+';
 	if ( defined $glob ) {
 		print $glob join( "\n", @{ $self->{'data'} } ) . "\n";
 	}
@@ -115,7 +115,7 @@ sub write {
 }
 
 sub sequence {
-	my ( $self, $v) = @_;
+	my ( $self, $v ) = @_;
 	@{ $self->{'data'} }[1] = $v if ( defined $v );
 	return @{ $self->{'data'} }[1];
 }
@@ -130,8 +130,8 @@ sub quality {
 	my ( $self, $v, $int ) = @_;
 	$int ||= 0;
 	@{ $self->{'data'} }[3] = $v if ( defined $v );
-	if ( $int ) {
-		return  map { $_ - 33 } unpack("C*", @{ $self->{'data'} }[3] );
+	if ($int) {
+		return map { $_ - 33 } unpack( "C*", @{ $self->{'data'} }[3] );
 	}
 	return @{ $self->{'data'} }[3];
 }
@@ -146,18 +146,19 @@ Return 1 or 0.
 =cut
 
 sub is_polyA {
-	my ($self, $ignore, $cutoff )= @_;
-	$ignore ||=10;
+	my ( $self, $ignore, $cutoff ) = @_;
+	$ignore ||= 10;
 	$cutoff ||= 10;
 	$self = $self->copy();
 	$self->drop_low_quality($cutoff);
-	return 1 if ( length($self->sequence) == 0);
+	return 1 if ( length( $self->sequence ) == 0 );
 	$self->trim( 'start', 10 );
-	return 1 if ( length($self->sequence) == 0);
+	return 1 if ( length( $self->sequence ) == 0 );
 	my $notA = 0;
-	
-	map { $notA ++ unless ( $_ eq "A") } split("",$self->sequence());
-	if ( $notA / length($self->sequence() ) <= 0.05 ) { ## less than 5 % not A's - likely a polyA only read
+
+	map { $notA++ unless ( $_ eq "A" ) } split( "", $self->sequence() );
+	if ( $notA / length( $self->sequence() ) <= 0.05 )
+	{    ## less than 5 % not A's - likely a polyA only read
 		return 1;
 	}
 	return 0;
@@ -170,23 +171,27 @@ trim up to bp $position if $where = 'start' and from $position to end if $where 
 =cut
 
 sub trim {
-	my ($self, $where, $position) = @_;
-	$position ||= 0;
-	return $self if ( $position == 0);
-	my @seq = split( "", $self->sequence() );
-	my @origQ = split("", $self->quality() );
-	
+	my ( $self, $where, $position ) = @_;
+	return $self unless ($position);    # 0 or undefined
+	my $length = length( $self->sequence() );
+
 	if ( $where eq "start" ) {
-		splice( @seq, 0,$position );
-		splice( @origQ, 0,$position )
-	}elsif ($where eq "end" ) {
-		splice( @seq, $position,scalar(@seq)-$position );
-		splice( @origQ, $position,scalar(@origQ)-$position )
+		$self->sequence(
+			substr( $self->sequence(), $position, $length - $position ) );
+		$self->quality(
+			substr( $self->quality(), $position, $length - $position ) );
 	}
-	else { Carp::confess ( "trim ($self, $where, $position) can not trim the position '$where', only start or end")}
-	
-	$self->quality(join("",@origQ));
-	$self->sequence( join("", @seq));
+	elsif ( $where eq "end" ) {
+		$self->sequence( substr( $self->sequence(), 0, $length - $position ) );
+		$self->quality( substr( $self->quality(), 0, $length - $position ) )
+		  ;
+	}
+	else {
+		Carp::confess(
+"trim ($self, $where, $position) can not trim the position '$where', only start or end"
+		);
+	}
+
 	return $self;
 }
 
@@ -196,46 +201,48 @@ This will filter areas at the beginning and end of the read where the mean quali
 
 =cut
 
-sub filter_low_quality{
-	my ( $self, $cutoff) = @_;
-	$cutoff ||=10;
-	my @seq = split( "", $self->sequence() );
-	my @origQ = split("", $self->quality() );
-	my @qual = $self->quality(undef,1);
-	my ( $sum, $n);
+sub filter_low_quality {
+	my ( $self, $cutoff ) = @_;
+	$cutoff ||= 10;
+	my @seq   = split( "", $self->sequence() );
+	my @origQ = split( "", $self->quality() );
+	my @qual = $self->quality( undef, 1 );
+	my ( $sum, $n );
 	## trim start
 	$sum = $n = 0;
-	for ( my $i = 0; $i < @seq; $i ++ ) {
+	for ( my $i = 0 ; $i < @seq ; $i++ ) {
 		$sum += $qual[$i];
-		$n ++;
-		if ( $sum / $n > $cutoff ){
-			$n --;
+		$n++;
+		if ( $sum / $n > $cutoff ) {
+			$n--;
 			last;
 		}
 	}
-	if ( $n > 0 ){
-		splice(@seq, 0, $n );
-		splice(@origQ, 0, $n);
-		splice(@qual, 0, $n);
+	if ( $n > 0 ) {
+		splice( @seq,   0, $n );
+		splice( @origQ, 0, $n );
+		splice( @qual,  0, $n );
 	}
+
 	# trim end
 	$sum = $n = 0;
-	for ( my $i = @seq-1; $i >= 0; $i -- ) {
+	for ( my $i = @seq - 1 ; $i >= 0 ; $i-- ) {
 		$sum += $qual[$i];
-		$n ++;
-		if ( $sum / $n > $cutoff ){
-			$n --;
+		$n++;
+		if ( $sum / $n > $cutoff ) {
+			$n--;
 			last;
 		}
 	}
-	if ( $n > 0 ){
+	if ( $n > 0 ) {
 		my $s = @seq - $n;
-		splice(@seq, $s, $n );
-		splice(@origQ, $s, $n);
-		splice(@qual, $s, $n);
+		splice( @seq,   $s, $n );
+		splice( @origQ, $s, $n );
+		splice( @qual,  $s, $n );
 	}
-	$self->sequence(join("", @seq));
-	$self->quality (join("", @origQ));
+	$self->sequence( join( "", @seq ) );
+	$self->quality( join( "", @origQ ) );
+
 	#warn "seq sength after filter:".scalar(@seq)."\n";
 	return $self;
 }
@@ -250,21 +257,21 @@ THIS WILL ADD INDELS TO THE SEQUENCE
 sub drop_low_quality {
 	my ( $self, $cutoff ) = @_;
 	$cutoff ||= 10;
-	my @seq = split( "", $self->sequence() );
-	my @origQ = split("", $self->quality() );
-	
-	my @qual = $self->quality(undef,1);
+	my @seq   = split( "", $self->sequence() );
+	my @origQ = split( "", $self->quality() );
+
+	my @qual = $self->quality( undef, 1 );
 	my $c = 0;
-	for ( my $i = @qual-1 ;$i >=0; $i -- ) {
+	for ( my $i = @qual - 1 ; $i >= 0 ; $i-- ) {
 		if ( $qual[$i] <= $cutoff ) {
 			$c = 1;
-			splice(@seq,$i,1 );
-			splice(@origQ, $i,1);
+			splice( @seq,   $i, 1 );
+			splice( @origQ, $i, 1 );
 		}
 	}
-	if ( $c ) {
-		$self->quality(join("",@origQ));
-		$self->sequence( join("", @seq));
+	if ($c) {
+		$self->quality( join( "", @origQ ) );
+		$self->sequence( join( "", @seq ) );
 	}
 	return $self;
 }
@@ -279,58 +286,61 @@ Using start and length you can select a substring in the fastq entry.
 =cut
 
 sub distance_to {
-	my ( $self, $string, $start, $length) = @_;
-	my (@values, @qualites, @ref);
-	$string = [ $string ] unless ( ref($string) eq "ARRAY" );
-	@qualites = $self->quality(undef,1);
-	
-	if ( defined $start and defined $length) {
-		@values = (split( "", substr( $self->sequence(), $start, $length )));
-		@qualites =  @qualites[$start..($start+$length-1)] ;
-	}elsif ( defined $start ) {
-		@values = (split( "", substr( $self->sequence(), $start )));
-		@qualites =  @qualites[$start..(@qualites-1)] ;
-	}else {
-		@values = (split( "",$self->sequence()));
+	my ( $self, $string, $start, $length ) = @_;
+	my ( @values, @qualites, @ref );
+	$string = [$string] unless ( ref($string) eq "ARRAY" );
+	@qualites = $self->quality( undef, 1 );
+
+	if ( defined $start and defined $length ) {
+		@values = ( split( "", substr( $self->sequence(), $start, $length ) ) );
+		@qualites = @qualites[ $start .. ( $start + $length - 1 ) ];
 	}
-	@ref = split( "",@$string[0]);
-	print join("\n",
-		join("",@ref ),
-		join("", @values),
-		join("", @qualites)
-	)."\n" if ( $self->{'debug'});
-	Carp::confess ( "The arrays do not have the same dimension: ".join(", ", map{scalar(@$_)} \@ref, \@values, \@qualites ) ) 
-		unless (scalar(@values) == scalar(@ref) and scalar(@ref)==scalar(@qualites));
-	return map { 
-		$self->_distance( [split( "",$_)], \@values, \@qualites );
-	} @$string;
-	
+	elsif ( defined $start ) {
+		@values = ( split( "", substr( $self->sequence(), $start ) ) );
+		@qualites = @qualites[ $start .. ( @qualites - 1 ) ];
+	}
+	else {
+		@values = ( split( "", $self->sequence() ) );
+	}
+	@ref = split( "", @$string[0] );
+	print
+	  join( "\n", join( "", @ref ), join( "", @values ), join( "", @qualites ) )
+	  . "\n"
+	  if ( $self->{'debug'} );
+	Carp::confess( "The arrays do not have the same dimension: "
+		  . join( ", ", map { scalar(@$_) } \@ref, \@values, \@qualites ) )
+	  unless ( scalar(@values) == scalar(@ref)
+		and scalar(@ref) == scalar(@qualites) );
+	return
+	  map { $self->_distance( [ split( "", $_ ) ], \@values, \@qualites ); }
+	  @$string;
+
 }
 
 sub _distance {
 	my ( $self, $str, $ref, $qual ) = @_;
-	my $sum = my $mm= 0;
-	for( my $i = 0; $i <@$str; $i++) {
-		unless ( @$str[$i] eq @$ref[$i]){
+	my $sum = my $mm = 0;
+	for ( my $i = 0 ; $i < @$str ; $i++ ) {
+		unless ( @$str[$i] eq @$ref[$i] ) {
 			$sum += @$qual[$i];
-			$mm ++;
+			$mm++;
 		}
 	}
-	return { 'dist' =>$sum, 'mm' => $mm} ;
+	return { 'dist' => $sum, 'mm' => $mm };
 }
 
 sub Add_UMI_Tag {
 	my ( $self, $tag ) = @_;
-	my @tmp = split(" ", $self->name());
+	my @tmp = split( " ", $self->name() );
 	$tmp[0] .= ":$tag";
-	$self->name(join(" ", @tmp ) );
+	$self->name( join( " ", @tmp ) );
 	return $self;
 }
 
 sub Get_UMI_Tag {
-	my ( $self ) = @_;
-	my @tmp = split(" ", $self->name());
-	@tmp = split(":", $tmp[0]);
+	my ($self) = @_;
+	my @tmp = split( " ", $self->name() );
+	@tmp = split( ":", $tmp[0] );
 	return pop(@tmp);
 }
 

@@ -413,19 +413,37 @@ sub run_notest {
 	@OK = grep ( !/^\s*$/,   @OK );
 	@OK = grep ( !/^module/, @OK )
 	  ;    ## the module load lines should also not make the script run.
+	if ( @OK > 0 ) {
+		return $self->runScript( ); 
+	}
+	else {
+		print
+"All outfiles present for $fm->{path}/$fm->{'filename_core'}.sh - not run\n";
+		return 0;
+	}
+}
 
-	if ( @OK > 0 and !$self->{'debug'} ) {
+sub runScript{
+	my ( $self, $scriptfile, $outfile ) = @_;
+	$outfile ||='';
+	
+	if ( -f $outfile ){
+		print "Outfile $outfile is present - script not run\n";
+		return -1;
+	}
+	my $fm = root->filemap($scriptfile);
+	unless ( $self->{'debug'} ) {
 		if ( $self->{'local'} or $self->{'run_local'}) {
 			## add a local stdout and stderr file like slurm does.
+			
 			system( $self->{'shell'}
-				  . " $fm->{path}/$fm->{'filename_core'}.sh "
+				  . " $scriptfile "
 				  . "2> $fm->{path}/$fm->{'filename_core'}.local$$.err "
 				  . " > $fm->{path}/$fm->{'filename_core'}.local$$.out " );
 			return $$;
 		}
 		else {    ## use slurm pipeline
-
-#	print "test if I am allowed to submitt the job: ($self->{'partitition'},$self->{'max_jobs'}) ".$self-> in_pipeline()." >= $self->{'max_jobs'}?\n";
+		
 			if ( $self->in_pipeline() >= $self->{'max_jobs'} ) {
 				print
 "More than $self->{'max_jobs'} jobs in the pipeline - waiting:\n";
@@ -436,25 +454,20 @@ sub run_notest {
 				}
 				print "\n";
 			}
-			print "sbatch $fm->{path}/$fm->{'filename_core'}.sh\n";
+			print "sbatch $scriptfile\n";
 			map { unlink($_) }
-			  $self->get_files_from_path( './', "$fm->{'filename_core'}\\d*.err",
-				"$fm->{'filename_core'}\\d*.out" );
+			  $self->get_files_from_path( './', "$fm->{'filename_core'}.\\d*.err",
+				"$fm->{'filename_core'}.\\d*.out" );
 			
-			open( PID, "sbatch $fm->{path}/$fm->{'filename_core'}.sh |" );
+			open( PID, "sbatch $scriptfile |" );
 			my $tmp = join( "", <PID> );
-
+			close ( PID );
 			#print $tmp;
 			if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
 				print "Submitted batch job '$1'\n";
 				return $1;
 			}
 		}
-	}
-	elsif ( @OK == 0 ) {
-		print
-"All outfiles present for $fm->{path}/$fm->{'filename_core'}.sh - not run\n";
-		return 0;
 	}
 	else {
 		print
