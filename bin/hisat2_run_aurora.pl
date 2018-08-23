@@ -264,7 +264,7 @@ while ( scalar(@files) ) {
 	my (@cmd, @ofiles);
 	
 	($cmd[0], $this_outfile ) = &create_call(); ## this is a temporary step
-	
+	$cmd[0] = "date\n$cmd[0]date\n"; ## Would be nice to see the execution time in the log...
 	if ( $noSort ){
 		@tmp = $BAM->convert_sam_2_bam( $this_outfile );
 		$tmp[0] = $cmd[0].$tmp[0];

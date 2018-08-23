@@ -227,6 +227,10 @@ sub script {
 	if ( $self->{'options'}->value('w') ) {    ## that is a special one
 		$ret .= "#SBATCH -w, --" . $self->{'options'}->value('w') . "\n";
 	}
+	if ( $self->{'options'}->value('A') eq "lsens2017-3-2" ){
+		$self->{'options'}->value('A', 'lsens2018-3-3');
+		warn "Please update your project info to 'lsens2018-3-3'\n";
+	}
 	my $tmp;
 	foreach my $option (
 		@{ $self->{'options'}->{'required'} },
@@ -253,12 +257,15 @@ sub script {
 	}
 	if ( ref($cmd) eq "ARRAY" ) {
 		$ret .= "\n" . shift(@$cmd);
+		chomp($ret);
+		$ret .= "\ndate\n";
 		for ( my $i = 0 ; $i < @$cmd ; $i++ ) {
 			$ret .= @{ $self->{'sub_SLURMS'} }[$i]->subscript( @$cmd[$i] );
 		}
 	}
 	else {
-		$ret .= "\n$cmd\n";
+		chomp($ret);
+		$ret .= "\n$cmd\ndate\n";
 	}
 	return $ret;
 }
@@ -266,17 +273,35 @@ sub script {
 =head2 subscript ( $cmd )
 
 Create only the module loads and the cmd parts of the script.
-This function is used internally to create scripts that need different sets of modules loaded at different timepoints.
+This function is used internally to create scripts that need 
+different sets of modules loaded at different timepoints.
+
+If there is no command other than copying or moving files the modules will not be loaded.
 
 =cut
 
 sub subscript {
 	my ( $self, $cmd ) = @_;
-	my $ret = '';
-	if ( @{ $self->{'SLURM_modules'} } ) {
+	
+	unless ( $cmd =~ m/\w/ ) {
+		return '';
+	}
+	my $ret = "## here comes a subscript entry:\n";
+	my $OK = { 'cp' => 1 ,'mv' => 1, 'date' => 1, 'module' => 1, 'result' => 0 };
+	my @tmp;
+	foreach ( split( "\n", $cmd ) ){
+		next unless ( $_ =~m/\w/);
+		@tmp = split(/\s/, $_ );
+		unless ( $OK ->{$tmp[0]} ) {
+			$OK ->{'result'} = 1
+		}
+	}
+	if ( @{ $self->{'SLURM_modules'} } and $OK->{'result'} ) {
 		$ret .= $self->load_SLURM_modules();
 	}
-	$ret .= "\n" . $cmd . "\n";
+	chomp($ret);
+	chomp($cmd);
+	$ret .= "\n" . $cmd . "\ndate\n";
 	return $ret;
 }
 
@@ -414,7 +439,7 @@ sub run_notest {
 	@OK = grep ( !/^module/, @OK )
 	  ;    ## the module load lines should also not make the script run.
 	if ( @OK > 0 ) {
-		return $self->runScript( ); 
+		return $self->runScript( "$fm->{path}/$fm->{'filename_core'}.sh" ); 
 	}
 	else {
 		print
@@ -427,6 +452,9 @@ sub runScript{
 	my ( $self, $scriptfile, $outfile ) = @_;
 	$outfile ||='';
 	
+	unless ( -f $scriptfile ) {
+		Carp::confess( "I need a script file to run on the cluster\nNot '$scriptfile'\n" );
+	}
 	if ( -f $outfile ){
 		print "Outfile $outfile is present - script not run\n";
 		return -1;
