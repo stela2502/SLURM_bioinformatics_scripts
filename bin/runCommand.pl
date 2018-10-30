@@ -28,6 +28,8 @@
        		A  :the accout to use (lu2016-2-7)
        -outfile :the outfile that will be created during the run (to check whether it should be run or not.)
 
+       -loadModules : a list of modules to load in the script
+       
        -I_have_loaded_all_modules :add this switch (no value) and mean it ;-)
 
        -help           :print this help
@@ -55,12 +57,13 @@ my $plugin_path = "$FindBin::Bin";
 my $VERSION = 'v1.0';
 
 
-my ( $help, $debug, $database, $cmd, $options, @options, $I_have_loaded_all_modules, $outfile, $max_jobs);
+my ( $help, $debug, $database, $cmd, $options, @options, $I_have_loaded_all_modules, $outfile, $max_jobs, @loadModules);
 
 Getopt::Long::GetOptions(
 	 "-cmd=s"    => \$cmd,
        "-options=s{,}"    => \@options,
 	 "-outfile=s"    => \$outfile,
+	 "-loadModules=s{,}" => \@loadModules,
 	 "-I_have_loaded_all_modules" => \$I_have_loaded_all_modules,
 	 "-max_jobs=s" => \$max_jobs,
 
@@ -80,8 +83,12 @@ unless ( defined $options[0]) {
 unless ( defined $outfile) {
 	$error .= "the cmd line switch -outfile is undefined!\n";
 }
+if ( defined $loadModules[0]){
+	## Cool process that later.	
+}else {
 unless ( $I_have_loaded_all_modules ){
 	$error .= "Please make sure you have loaded all required modules and try again! (-I_have_loaded_all_modules missing)\n"
+}
 }
 unless ( $max_jobs ){
 	$max_jobs = 40;
@@ -138,6 +145,11 @@ $options->{'debug'} = $debug;
 $options->{'max_jobs'} ||= $max_jobs;
 
 my $SLURM =stefans_libs::SLURM->new( $options );
+
+if ( defined $loadModules[0]) {
+	## create a copy - might be better...
+	$SLURM->{'SLURM_modules'} = [@loadModules];
+}
 $SLURM->{'debug'} = $debug;
 
 if ( $cmd =~ m/\$SNIC_TMP/ ) {

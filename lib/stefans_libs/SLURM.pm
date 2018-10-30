@@ -20,6 +20,7 @@ package stefans_libs::SLURM;
 use strict;
 use warnings;
 
+use Digest::MD5 qw(md5_hex);
 use File::HomeDir;
 use File::Spec::Functions;
 
@@ -248,6 +249,8 @@ sub script {
 		  "#SBATCH $tmp$option " . $self->{'options'}->value($option) . "\n";
 
 	}
+	#Tina2_ce
+	$name = substr( $name, 0,2 ). substr( md5_hex($name), 0,4 );
 	$ret .= join( "\n",
 		"#SBATCH -J $name",
 		"#SBATCH -o $name" . ".%j.out",
