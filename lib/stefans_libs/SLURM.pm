@@ -270,6 +270,7 @@ sub script {
 		chomp($ret);
 		$ret .= "\n$cmd\ndate\n";
 	}
+	$ret .= "exit 0\n";
 	return $ret;
 }
 
