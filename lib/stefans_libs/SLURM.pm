@@ -467,6 +467,23 @@ sub runScript{
 		print "Outfile $outfile is present - script not run\n";
 		return -1;
 	}
+	## And here I will check once more whether the script is actually containing any interesting function calls:
+	open ( TEST , "<$scriptfile") or die $!;
+	my $important = 0;
+	while ( <TEST> ) {
+		next if ($_ =~ m/^#/);
+		chomp();
+		next if ( $_ =~m/\s*exit 0\s*/ );
+		next if ( $_ =~m/\s*date\s*/ );
+		next if ( $_ =~m/^\s*module load / or $_ =~ m/^\s*ml / );
+		next if ( $_ =~m/^\s*module purge/ );
+		$important ++;
+	}
+	close ( TEST );
+	unless ( $important ) {
+		warn "Script did not contain any command apart from module calls data or exit statements\n\t$scriptfile not run\n";
+		return -1;
+	}
 	my $fm = root->filemap($scriptfile);
 	unless ( $self->{'debug'} ) {
 		if ( $self->{'local'} or $self->{'run_local'}) {

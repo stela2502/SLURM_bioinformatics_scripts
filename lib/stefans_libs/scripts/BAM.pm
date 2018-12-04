@@ -146,8 +146,21 @@ sub recover_files {
 		$fm = $self->fm_check($fm);
 		my $f  = $fm->{'path'} . "/" . $fm->{'filename'};
 		my $final = $final_path."/".$fm->{'filename'};
+		if ( -f $final ) {
+			$self->{'Outfile_exists'} ++;
+		}
 		unless ( $final eq $f ){
-			$cmd .= "mv $f $final\n";
+			my $s;
+			if ( $f =~ m!^(\$[\w_]+[/\\])(.*)! ){
+				$s = "if [ -f $1'$2' ];then \n"
+			}else {
+				$s = "if [ -f '$f' ];then \n"
+			}
+			$s .= "  cp $f $final\n"
+			. "else\n  ( >&2 echo 'file $f was not produced - files in the same path:')\n"
+			. "  for filename in $fm->{'path'}/*\n  do\n    (>&2 echo \$filename) \n  done;\nfi\n";
+			
+			$cmd .= $s;
 		}
 	}
 	return $cmd

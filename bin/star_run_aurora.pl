@@ -19,11 +19,10 @@
 
 =head1  SYNOPSIS
 
-    hisat2_run_aurora.pl
+    star_run_aurora.pl
        -files     :the input fastq or sra files
        -outpath   :the outpath for the mapped files
                    default to subpath of infile named HISAT2_OUT
-       -sra       :the files are in sra format, not fastq
        -max_jobs  :Define how many different jobs might be sublitted at a time.
                    default 40
        -local     :run the alignements one by one on the local comuter
@@ -39,10 +38,10 @@
        -fast_tmp :the nodes should have a fast local tmp folder that could be used for 
                   the intermediate files (default '$SNIC_TMP')
 
-       -mapper_options :specific options for the hisat2 as one string
+       -mapper_options :specific options for the star process as one string
                         e.g. -mapper_options '--max-seeds 500'
 
-       -genome       :the hisat2 genome information path
+       -genome       :the star genome information path
        -coverage     :the chromome length file
        -paired       :analyse paried fasta files
                       every first file == read 1 every second == read2
@@ -101,7 +100,7 @@ Getopt::Long::GetOptions(
 	"-outpath=s"        => \$outpath,
 	"-paired"           => \$paired,
 	"-bigwigTracks=s"   => \$bigwigTracks,
-	"-sra"              => \$sra,
+#	"-sra"              => \$sra,
 	"-max_jobs=s"       => \$max_jobs,
 	"-dropDuplicates"   => \$dropDuplicates,
 	"-mapper_options=s" => \$mapper_options,
@@ -131,6 +130,9 @@ unless ( -f $coverage ) {
 }
 unless ( defined $bigwigTracks ) {
 	$error .= "the cmd line switch -bigwigTracks is undefined!\n";
+}
+if (  $sra ) {
+	Carp::confes( "sra option does not exists for STAR!");
 }
 
 unless ( defined $mapper_options ) {
@@ -229,8 +231,8 @@ $SLURM->{'purge'} = 1;
 
 unless ($local) {
 	$SLURM->{'SLURM_modules'} = [
-	'icc/2017.1.132-GCC-6.3.0-2.27', 'impi/2017.1.132','SAMtools/1.4.1', 'HISAT2/2.1.0',
-'BEDTools/2.26.0','Java/1.8.0_92' 
+	'GCC/5.4.0-2.26',  'OpenMPI/1.10.3', 'STAR/2.6.0c',
+	'SAMtools/1.4', 'BEDTools/2.26.0'
 		#'GCC/4.9.3-2.25', 'OpenMPI/1.10.2',
 		#'icc/2016.1.150-GCC-4.9.3-2.25', 'impi/5.1.2.150', 'SAMtools/1.3.1',
 		#'HISAT2/2.0.4',
@@ -265,15 +267,15 @@ while ( scalar(@files) ) {
 	
 	($cmd[0], $this_outfile ) = &create_call(); ## this is a temporary step
 	$cmd[0] = "date\n$cmd[0]date\n"; ## Would be nice to see the execution time in the log...
-	if ( $noSort ){
-		@tmp = $BAM->convert_sam_2_bam( $this_outfile );
-		$tmp[0] = $cmd[0].$tmp[0];
-		$cmd[0] = &chk_cmd( @tmp );
-	}else {
-		@tmp = $BAM->convert_sam_2_sorted_bam($this_outfile );
-		$tmp[0] = $cmd[0].$tmp[0];
-		$cmd[0] = &chk_cmd( @tmp );
-	}
+#	if ( $noSort ){
+#		@tmp = $BAM->convert_sam_2_bam( $this_outfile );
+#		$tmp[0] = $cmd[0].$tmp[0];
+#		$cmd[0] = &chk_cmd( @tmp );
+#	}else {
+#		@tmp = $BAM->convert_sam_2_sorted_bam($this_outfile );
+#		$tmp[0] = $cmd[0].$tmp[0];
+#		$cmd[0] = &chk_cmd( @tmp );
+#	}
 	push ( @ofiles, "$this_outfile" );
 		
 	if ($dropDuplicates){
@@ -289,20 +291,22 @@ while ( scalar(@files) ) {
 	  &chk_cmd( $BAM->convert_bedGraph_2_bigwig( $this_outfile, $coverage ) );
 	  push ( @ofiles, "$this_outfile" );
 	}
+	$BAM->{'Outfile_exists'} = 0;
 	my @tmp = map {  &chk_cmd_no_cp( $BAM->recover_files( $mainOutpath, $_ ), $_ ) } @ofiles;
-	my $null_all = 1;
-	foreach ( @tmp ) {
-		unless( $_ =~m/^#/ ) { $null_all= 0 }
+	my $null_all = 0;
+	if ( $BAM->{'Outfile_exists'} == scalar(@ofiles) ) {
+		## OK we can stop here...
+		print ( "outfile(s) ". join(", ", @ofiles). " do all exists - no need to run the script\n" );
+		$null_all = 1;
 	}
 	map { $cmd[1] .= $_ } @tmp;
 	if ( $null_all ) {
 		## nothing has to be run - all outfiles are present!
 		$cmd[0] = join( "\n", map { if ( $_ =~m/^#/) { $_} else { "#$_"} } split("\n", $cmd[0] ) );
-		
 		$cmd[1] = join( "\n", map { if ( $_ =~m/^#/) { $_} else { "#$_"} } split("\n", $cmd[1] ) );
 	}
 
-	push( @jobs, { 'outfile' => "$this_outfile", 'cmd' => [@cmd], 'fm' => $fm } );
+	push( @jobs, { 'outfile' => "$this_outfile", 'cmd' => [@cmd], 'fm' => $fm, 'run' => !$null_all  } );
 }
 
 foreach my $job ( @jobs[ &FileSizeOrder(@jobs) ] ) {
@@ -370,23 +374,31 @@ sub create_call {
 	my $file = shift(@files);
 	my $fm   = root->filemap($file);
 	my $p    = $outpath;
-	$p ||= "$fm->{'path'}/HISAT2_OUT";
+	$p ||= "$fm->{'path'}/STAR_OUT";
 	$mainOutpath = $p;
 	mkdir("$p/") unless ( -d "$p/" );
 	$fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
 	unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
+	my $unzip = "";
+	if ( $fm->{'filename_ext'} eq "gz" ) {
+		$unzip = '--readFilesCommand zcat'
+	}
+	my $encode_opts = "--outFilterType BySJout --outFilterMultimapNmax 20 --alignSJoverhangMin 8"
+		.	" --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04"
+		. 	" --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMmultNmax 1";
 	my $s =
-"hisat2 $mapper_options -x $genome -U $fm->{'total'} --threads $options->{proc} --add-chrname > $fast_tmp/$fm->{'filename_core'}_hisat.sam\n";
+"STAR $mapper_options --genomeDir $genome --readFilesIn $fm->{'total'} --runThreadN $options->{proc} "
+. "$unzip $encode_opts --outFileNamePrefix $fast_tmp/$fm->{'filename_core'} --outSAMtype BAM SortedByCoordinate --twopassMode Basic \n";
 	## here I need to know what we finally what to get
 	
-	return $s, "$fast_tmp/$fm->{'filename_core'}_hisat.sam", "$p/$fm->{'filename_core'}_hisat.sorted.bam", "$p/$fm->{'filename_core'}_hisat.bam"  ;
+	return $s, "$fast_tmp/$fm->{'filename_core'}Aligned.sortedByCoord.out.bam", "$fast_tmp/$fm->{'filename_core'}Aligned.sortedByCoord.out.bam"  ;
 }
 
 sub create_sra_call {
 	my $file = shift(@files);
 	my $fm   = root->filemap($file);
 	my $p    = $outpath;
-	$p ||= "$fm->{'path'}/HISAT2_OUT";
+	$p ||= "$fm->{'path'}/STAR_OUT";
 	$mainOutpath = $p;
 	mkdir("$p/") unless ( -d "$p/" );
 	$fm->{'path'} = "" if ( $fm->{'path'} eq "./" );
@@ -402,7 +414,7 @@ sub create_paired_call {
 	my $fm   = root->filemap($file);
 	my $fm2  = root->filemap($pair);
 	my $p    = $outpath;
-	$p ||= "$fm->{'path'}/HISAT2_OUT";
+	$p ||= "$fm->{'path'}/STAR_OUT";
 	$mainOutpath = $p;
 	$fm->{'path'}  = "" if ( $fm->{'path'} eq "./" );
 	$fm2->{'path'} = "" if ( $fm2->{'path'} eq "./" );
@@ -410,10 +422,19 @@ sub create_paired_call {
 	$fm2->{'path'} .= '/' unless ( $fm2->{'path'} =~ m/\/$/ );
 	mkdir("$p/") unless ( -d "$p/" );
 	unless ( $fm->{'path'} =~ m/^\// ) { $fm->{'path'} = $dir . $fm->{'path'}; }
+	my $unzip = "";
+	if ( $fm->{'filename_ext'} eq "gz" ) {
+		$unzip = '--readFilesCommand zcat'
+	}
+	my $encode_opts = "--outFilterType BySJout --outFilterMultimapNmax 20 --alignSJoverhangMin 8"
+		.	" --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04"
+		. 	" --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMmultNmax 1";
 	my $s =
-"hisat2 $mapper_options -x $genome -1 $fm->{'total'} -2 $fm2->{'total'} --threads $options->{proc} --add-chrname > $fast_tmp/$fm->{'filename_core'}_hisat.sam\n";
-	return $s, "$fast_tmp/$fm->{'filename_core'}_hisat.sam",
-	  "$p/$fm->{'filename_core'}_hisat.sorted.bam";
+"STAR $mapper_options --genomeDir $genome --readFilesIn $fm->{'total'} $fm2->{'total'} --runThreadN $options->{proc} "
+. "$unzip $encode_opts --outFileNamePrefix $fast_tmp/$fm->{'filename_core'} --outSAMtype BAM SortedByCoordinate --twopassMode Basic \n";
+	
+	return $s, "$fast_tmp/$fm->{'filename_core'}Aligned.sortedByCoord.out.bam", "$fast_tmp/$fm->{'filename_core'}Aligned.sortedByCoord.out.bam"  ;
+
 }
 
 sub chk_cmd {
@@ -440,6 +461,12 @@ sub chk_cmd_no_cp {
 }
 
 
+=head final_outfile( $final_path, @files )
+
+checks if the outfiles are present at the moment and therefore do not need to get created.
+
+=cut
+
 sub final_outfile {
 	my ( $final_path, @files) = @_;
 
@@ -448,14 +475,18 @@ sub final_outfile {
 		$fm = &fm_check($fm);
 		my $f  = $fm->{'path'} . "/" . $fm->{'filename'};
 		my $final = $final_path."/".$fm->{'filename'};
-		unless ( $final eq $f ){
-			push ( @ret, $final);
-			if ( -f $final ){
-				$preprocessed_outfile_to_infile ->{"cp $final $f\n" } ++;
-			}
-		}else {
-			push ( @ret, $f );
-		}
+		unless ( -f $final ) {
+			## this needs to be produced
+			push( @ret, 1)
+		}else { push ( @ret , 0 )}
+#		unless ( $final eq $f ){
+#			# create a little bash script that does some error checking..
+#			my $s = "if [ -f '$final' ];then \n  cp $final $f\n"
+#			. "else\n  ( >&2 echo 'file $final was not produced - files in the same path:')\n  for filename in /home/user/*\n  do\n    (>&2 echo \$filename) \n  done;\nfi\n";
+#			push ( @ret, $s);
+#		}else {
+#			push ( @ret, $f );
+#		}
 	}
 	return @ret;
 }

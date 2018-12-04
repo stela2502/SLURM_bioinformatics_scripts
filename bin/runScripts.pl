@@ -77,7 +77,7 @@ unless ( defined $max_jobs) {
 	$max_jobs = 10;
 }
 unless ( defined $outfiles[0]) {
-	$error .= "the cmd line switch -outfiles is undefined!\n";
+	$warn .= "the cmd line switch -outfiles is undefined!\n";
 }
 
 
@@ -108,6 +108,7 @@ $task_description .= " -max_jobs '$max_jobs'" if (defined $max_jobs);
 $task_description .= ' -outfiles "'.join( '" "', @outfiles ).'"' if ( defined $outfiles[0]);
 
 
+if ( defined $outfiles[0] ){
 my $fm = root->filemap( $outfiles[0]);
 unless ( -d $fm->{'path'} ) {
 	system( "mkdir -p $fm->{'path'}" );
@@ -116,7 +117,11 @@ unless ( -d $fm->{'path'} ) {
 open ( LOG , ">$outfiles[0].log") or die $!;
 print LOG $task_description."\n";
 close ( LOG );
-
+}else {
+	open ( LOG , ">runScripts.$$.log" ) or die $!;
+	print LOG $task_description."\n";
+	close ( LOG );
+}
 
 ## Do whatever you want!
 
@@ -125,6 +130,7 @@ my $SLURM =stefans_libs::SLURM->new( { 'max_jobs' => $max_jobs });
 $SLURM->{'debug'} = $debug;
 
 for (my $i = 0; 4 < @scripts; $i ++ ) {
+	$outfiles[$i] ||= "kjsdbchjsdvjcblskdcnkjwsdbc";
 	$SLURM->runScript( $scripts[$i], $outfiles[$i] );
 }
 
