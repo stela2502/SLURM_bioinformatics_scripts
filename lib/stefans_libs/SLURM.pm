@@ -252,7 +252,7 @@ sub script {
 	#Tina2_ce
 	my $oldN = $name;
 	
-	$name = substr( $name, 0,2 ). substr( md5_hex($name), 0,4 );
+	$name = substr( $name, 0,4 ). substr( md5_hex($name), 0,4 );
 	warn "$oldN reports as $name\n";
 	
 	$ret .= join( "\n",
