@@ -23,8 +23,10 @@ use warnings;
 use Digest::MD5 qw(md5_hex);
 use File::HomeDir;
 use File::Spec::Functions;
+use stefans_libs::database::slurmscripts;
 
 use stefans_libs::flexible_data_structures::optionsFile;
+
 
 use stefans_libs::root;
 
@@ -64,8 +66,10 @@ sub new {
 
 	$clean = 0 unless ( defined $clean );
 
+	
 	my $self = {
 		'local'     => 0,
+		'dbfile'    => $options->{dbfile} || "~/workload.sqlite3",
 		'shell'         => 'bash',
 		'SLURM_modules' => [],
 		'sub_SLURMS'    => [],
@@ -77,7 +81,8 @@ sub new {
 				'required' => [ 'n', 'N', 't' ],
 				'optional' =>
 				  [ 'A', 'p', 'mail-user', 'mail-type', 'mem-per-cpu', 'w', 'begin' ],
-			}
+			},
+		'slurmscripts' => stefans_libs::database::slurmscripts->new(undef, $debug), ## creates a file ~/.slurmscripts.sqlite3
 		),
 	};
 
@@ -146,20 +151,29 @@ sub pids_finished {
 	my ( $self, @pids ) = @_;
 	return 1 if ( $self->{'local'} );
 	return 1 unless (@pids);
-	my $cmd = "squeue -u $self->{'username'} |";
-	open( IN, $cmd ) or die $!;
-	my @IN = <IN>;
-	close(IN);
-	my $ret = 1;
-	my (@line);
-	my $search = { map { $_ => 1 } @pids };
-
-	foreach (@IN) {
-		$_ =~ s/^\s*//;
-		@line = split( /\s+/, $_ );
-		$ret = 0 if ( $search->{ $line[0] } );
-	}
-	return $ret;
+#	my $cmd = "squeue -u $self->{'username'} |";
+#	open( IN, $cmd ) or die $!;
+#	my @IN = <IN>;
+#	close(IN);
+#	my $ret = 1;
+#	my (@line);
+#	my $search = { map { $_ => 1 } @pids };
+#
+#	foreach (@IN) {
+#		$_ =~ s/^\s*//;
+#		@line = split( /\s+/, $_ );
+#		$ret = 0 if ( $search->{ $line[0] } );
+#	}
+	## changed to database usage and external help!
+	return $self->{'slurmscripts'}->get_data_table_4_search(
+		{
+			'search_columns' =>
+			  [ ref($self) . '.PID' ],
+			'where' => [ [ ref($self) . '.Finished', '=', 'my_value' ], [ ref($self).'.PID', '=', 'my_value'] ],
+		},
+		0, \@pids
+	)->GetAsHash('PID');
+	#return $ret;
 }
 
 sub in_pipeline {
@@ -168,23 +182,24 @@ sub in_pipeline {
 	return 0 if ( $self->{'local'} );
 
 	#print "squeue -u $self->{'username'}\n";
-	open( IN, "squeue -u $self->{'username'} |" ) or die $!;
-	my @IN = <IN>;
-	close(IN);
-	## pending
-	## I also need to take care about the different partititions:
-	#print "In total ".scalar(@IN)." jobs\n";
-	if ( $self->{'partitition'} ) {
-		@IN = grep( /\s$self->{'partitition'}\s/, @IN );
-
-		#print scalar(@IN)." jobs in partitcion $self->{'partitition'}\n";
-	}
-	if ($select) {
-		return scalar( grep ( /\s$select\s/, @IN ) );
-	}
+#	open( IN, "squeue -u $self->{'username'} |" ) or die $!;
+#	my @IN = <IN>;
+#	close(IN);
+#	## pending
+#	## I also need to take care about the different partititions:
+#	#print "In total ".scalar(@IN)." jobs\n";
+#	if ( $self->{'partitition'} ) {
+#		@IN = grep( /\s$self->{'partitition'}\s/, @IN );
+#
+#		#print scalar(@IN)." jobs in partitcion $self->{'partitition'}\n";
+#	}
+#	if ($select) {
+#		return scalar( grep ( /\s$select\s/, @IN ) );
+#	}
 
 	#print join("", @IN );
 	## all
+	return $self->{'slurmscripts'}->waiting();
 	return scalar(@IN) - 1;
 }
 
@@ -428,6 +443,8 @@ sub get_files_from_path {
 	return @ret;
 }
 
+
+
 sub run_notest {
 	my ( $self, $cmd, $fm ) = @_;
 
@@ -455,6 +472,10 @@ sub run_notest {
 		return 0;
 	}
 }
+
+## this functionallity has to be replaced by a sqlite3 database.
+## create the scripts and add them to a database.
+## some other entity needs to run the scripts as we are likely in a docker or singularity image nowadays.
 
 sub runScript{
 	my ( $self, $scriptfile, $outfile ) = @_;
@@ -496,7 +517,7 @@ sub runScript{
 			return $$;
 		}
 		else {    ## use slurm pipeline
-		
+			
 			if ( $self->in_pipeline() >= $self->{'max_jobs'} ) {
 				print
 "More than $self->{'max_jobs'} jobs in the pipeline - waiting:\n";
@@ -512,14 +533,17 @@ sub runScript{
 			  $self->get_files_from_path( './', "$fm->{'filename_core'}.\\d*.err",
 				"$fm->{'filename_core'}.\\d*.out" );
 			
-			open( PID, "sbatch $scriptfile |" );
-			my $tmp = join( "", <PID> );
-			close ( PID );
+			$self->{'slurmscripts'}->AddDataset({'cmd' => "sbatch $fm->{'total'}", 'Finished' => 0 } );
+			#### get me here
+			print "Added cmd to database\n";
+			#open( PID, "sbatch $scriptfile |" );
+			#my $tmp = join( "", <PID> );
+			#close ( PID );
 			#print $tmp;
-			if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
-				print "Submitted batch job '$1'\n";
-				return $1;
-			}
+			#if ( $tmp =~ m/Submitted batch job (\d+)/ ) {
+			#	print "Submitted batch job '$1'\n";
+			#	return $1;
+			#}
 		}
 	}
 	else {

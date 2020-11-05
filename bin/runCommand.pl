@@ -38,6 +38,9 @@
 =head1 DESCRIPTION
 
   Gets one command line and runs it on the SLURM backend.
+  
+  If the string "$SNIC_TMP"" is found in the cmd all files 
+  from this folder are copied back to the output folder.
 
   To get further help use 'runCommand.pl -help' at the comman line.
 
