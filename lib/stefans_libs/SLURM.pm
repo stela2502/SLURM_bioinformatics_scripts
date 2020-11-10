@@ -66,6 +66,7 @@ sub new {
 
 	$clean = 0 unless ( defined $clean );
 
+	my $debug = 0;
 	
 	my $self = {
 		'local'     => 0,
@@ -200,7 +201,7 @@ sub in_pipeline {
 	#print join("", @IN );
 	## all
 	return $self->{'slurmscripts'}->waiting();
-	return scalar(@IN) - 1;
+#	return scalar(@IN) - 1;
 }
 
 =head3 script ( $cmd )
